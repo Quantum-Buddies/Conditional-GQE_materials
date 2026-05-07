@@ -14,6 +14,12 @@ def main() -> None:
     parser.add_argument("--ham", type=Path, required=True, help="Hamiltonian JSON path")
     parser.add_argument("--baseline", type=Path, required=True, help="Primary baseline JSON path")
     parser.add_argument("--cudaq-baseline", type=Path, default=None, help="Optional CUDA-Q baseline JSON path")
+    parser.add_argument(
+        "--gqe-baseline",
+        type=Path,
+        default=None,
+        help="Optional CUDA-Q GQE baseline JSON path",
+    )
     parser.add_argument("--train", type=Path, required=True, help="Training metrics JSON path")
     parser.add_argument("--out", type=Path, required=True, help="Output CSV path")
     args = parser.parse_args()
@@ -47,6 +53,9 @@ def main() -> None:
     if args.cudaq_baseline is not None and args.cudaq_baseline.exists():
         cudaq_baseline = _read_json(args.cudaq_baseline)
         append_baseline_records(cudaq_baseline)
+    if args.gqe_baseline is not None and args.gqe_baseline.exists():
+        gqe_baseline = _read_json(args.gqe_baseline)
+        append_baseline_records(gqe_baseline)
 
     rows.append(
         {

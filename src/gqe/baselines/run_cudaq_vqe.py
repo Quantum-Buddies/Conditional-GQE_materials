@@ -8,7 +8,7 @@ import numpy as np
 from scipy.optimize import minimize
 
 
-def _run_h2(maxiter: int) -> dict:
+def _run_h2(maxiter: int, method: str = "COBYLA") -> dict:
     geometry = [("H", (0.0, 0.0, 0.0)), ("H", (0.0, 0.0, 0.7474))]
     molecule = solvers.create_molecule(geometry=geometry, basis="sto-3g", spin=0, charge=0, casci=True)
 
@@ -25,13 +25,23 @@ def _run_h2(maxiter: int) -> dict:
             x(q[i])
         solvers.stateprep.uccsd(q, thetas, num_electrons, spin)
 
+    # Match NVIDIA documentation VQE pattern
+    # Multiple optimizers are supported (e.g. COBYLA, L-BFGS-B)
+    vqe_kwargs = {
+        "optimizer": minimize,
+        "method": method,
+        "options": {"maxiter": maxiter},
+    }
+    
+    if method == "L-BFGS-B":
+        vqe_kwargs["jac"] = "3-point"
+        vqe_kwargs["tol"] = 1e-4
+
     energy, _, _ = solvers.vqe(
         ansatz,
         molecule.hamiltonian,
         initial_x,
-        optimizer=minimize,
-        method="COBYLA",
-        options={"maxiter": maxiter},
+        **vqe_kwargs
     )
 
     # FCI/CASCI reference exposed by create_molecule result when casci=True.
@@ -52,9 +62,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run CUDA-Q VQE baseline.")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--maxiter", type=int, default=100)
+    parser.add_argument("--method", type=str, default="COBYLA", help="Optimizer method (e.g., COBYLA, L-BFGS-B)")
     args = parser.parse_args()
 
-    result = _run_h2(maxiter=args.maxiter)
+    result = _run_h2(maxiter=args.maxiter, method=args.method)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("w", encoding="utf-8") as f:
         json.dump({"results": [result]}, f, indent=2)

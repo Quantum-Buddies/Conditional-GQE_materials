@@ -170,10 +170,10 @@ if __name__ == "__main__":
 #INFO: ******************** input file end ********************
 
 
-System: uname_result(system='Linux', node='login4.aire.lee.alces.network', release='5.14.0-427.33.1.el9_4.x86_64', version='#1 SMP PREEMPT_DYNAMIC Wed Aug 28 17:34:59 UTC 2024', machine='x86_64')  Threads 32
+System: uname_result(system='Linux', node='gpu009.aire.lee.alces.network', release='5.14.0-427.33.1.el9_4.x86_64', version='#1 SMP PREEMPT_DYNAMIC Wed Aug 28 17:34:59 UTC 2024', machine='x86_64')  Threads 8
 Python 3.11.15 | packaged by conda-forge | (main, Mar  5 2026, 16:45:40) [GCC 14.3.0]
 numpy 2.4.4  scipy 1.17.1  h5py 3.16.0
-Date: Thu May  7 01:39:07 2026
+Date: Thu May  7 06:00:49 2026
 PySCF version 2.13.0
 PySCF path  /mnt/scratch/kcwp264/.conda_envs/cudaq-env/lib/python3.11/site-packages/pyscf
 
@@ -195,7 +195,7 @@ number of NR pGTOs = 6
 number of NR cGTOs = 2
 basis = sto-3g
 ecp = {}
-CPU time:        13.18
+CPU time:        26.16
 
 
 ******** <class 'pyscf.scf.hf.RHF'> ********
@@ -213,7 +213,7 @@ SCF max_cycles = 100
 direct_scf = True
 direct_scf_tol = 1e-13
 chkfile to save SCF result = H 0-pyscf.chk
-max_memory 4000 MB (current use 752 MB)
+max_memory 4000 MB (current use 771 MB)
 Set gradient conv threshold to 3.16228e-05
 Initial guess from minao.
 init E= -0.768060785035084

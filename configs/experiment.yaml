@@ -32,10 +32,16 @@ dataset:
       multiplicity: 1
       split: "val"
 training:
+  synthetic_samples: 256
   epochs: 5
   batch_size: 8
   learning_rate: 0.0005
   max_seq_len: 64
+model:
+  vocab_size: 64
+  hidden_size: 64
+  num_layers: 1
+  dropout: 0.0
 baselines:
   max_iterations: 150
   optimizer: "SLSQP"

@@ -16,6 +16,10 @@ warnings.filterwarnings(
 )
 
 
+def _coerce_optional_int(value: str | None, default: int) -> int:
+    return default if value is None else int(value)
+
+
 def _seed_everything(seed: int, torch) -> None:
     random.seed(seed)
     np.random.seed(seed)
@@ -32,6 +36,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Strict supervised CE training scaffold.")
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--seq-samples", type=int, default=None, help="Override synthetic sample count.")
+    parser.add_argument("--model-hidden", type=int, default=None, help="Override GRU hidden width.")
+    parser.add_argument("--model-layers", type=int, default=None, help="Override GRU layer count.")
+    parser.add_argument("--model-vocab", type=int, default=None, help="Override token vocab size.")
     parser.add_argument(
         "--use-cuda",
         action="store_true",
@@ -47,10 +55,22 @@ def main() -> None:
     import torch.optim as optim
 
     class TinySeqModel(nn.Module):
-        def __init__(self, vocab_size: int = 64, hidden: int = 64):
+        def __init__(
+            self,
+            vocab_size: int = 64,
+            hidden: int = 64,
+            num_layers: int = 1,
+            dropout: float = 0.0,
+        ):
             super().__init__()
             self.embed = nn.Embedding(vocab_size, hidden)
-            self.rnn = nn.GRU(hidden, hidden, batch_first=True)
+            self.rnn = nn.GRU(
+                hidden,
+                hidden,
+                batch_first=True,
+                num_layers=max(1, num_layers),
+                dropout=dropout if num_layers > 1 else 0.0,
+            )
             self.proj = nn.Linear(hidden, vocab_size)
 
         def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -68,17 +88,31 @@ def main() -> None:
     batch_size = int(cfg["training"]["batch_size"])
     lr = float(cfg["training"]["learning_rate"])
     seq_len = int(cfg["training"]["max_seq_len"])
+    seq_samples = int(cfg["training"].get("synthetic_samples", 256))
+    if args.seq_samples is not None:
+        seq_samples = args.seq_samples
+
+    model_cfg = cfg.get("model", {})
+    vocab_size = _coerce_optional_int(args.model_vocab, int(model_cfg.get("vocab_size", 64)))
+    hidden_size = _coerce_optional_int(args.model_hidden, int(model_cfg.get("hidden_size", 64)))
+    num_layers = _coerce_optional_int(args.model_layers, int(model_cfg.get("num_layers", 1)))
+    dropout = float(model_cfg.get("dropout", 0.0))
 
     device = torch.device("cuda" if args.use_cuda and torch.cuda.is_available() else "cpu")
     if args.use_cuda and device.type != "cuda":
         print("CUDA requested but unavailable. Falling back to CPU.")
 
-    model = TinySeqModel()
+    model = TinySeqModel(
+        vocab_size=vocab_size,
+        hidden=hidden_size,
+        num_layers=num_layers,
+        dropout=dropout,
+    )
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), lr=lr)
 
     model.to(device)
-    x, y = _build_synthetic_dataset(torch, n=256, seq_len=seq_len)
+    x, y = _build_synthetic_dataset(torch, n=seq_samples, seq_len=seq_len, vocab_size=vocab_size)
     x = x.to(device)
     y = y.to(device)
     model.train()
@@ -122,6 +156,13 @@ def main() -> None:
                 "epochs": epochs,
                 "batch_size": batch_size,
                 "learning_rate": lr,
+                "model": {
+                    "vocab_size": vocab_size,
+                    "hidden_size": hidden_size,
+                    "num_layers": num_layers,
+                    "dropout": dropout,
+                },
+                "synthetic_samples": seq_samples,
                 "batch_losses": batch_losses,
                 "epoch_losses": epoch_losses,
                 "final_loss": epoch_losses[-1] if epoch_losses else None,
