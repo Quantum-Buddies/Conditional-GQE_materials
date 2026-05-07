@@ -114,6 +114,40 @@ Scripts that run iterative work now include `tqdm` progress bars:
 - `run_adapt_vqe.py`
 - `train_supervised.py`
 
+## DGX Spark environment setup
+
+DGX Spark base image is Ubuntu 24.04 with NVIDIA AI stack components and CUDA 13.0 (per NVIDIA documentation) [DGX Spark software stack][dgx-spark-software].
+
+Use this Conda environment file to recreate the stack dependencies:
+
+```bash
+cd /scratch/kcwp264/Conditional-GQE_materials
+conda env create -f environment-dgx-spark.yml
+conda activate conditional-gqe
+```
+
+Optional all-in-one CUDA-Q stack:
+
+```bash
+conda env create -f environment-dgx-spark-cudaq.yml
+conda activate conditional-gqe-cudaq
+```
+
+Optional NVIDIA GQE support (if you used the base env):
+
+```bash
+pip install cudaq-solvers[gqe]
+```
+
+If `pip install cudaq-solvers[gqe]` fails on DGX Spark due to CUDA-Q wheels/tooling, verify Python/CUDA driver compatibility and ensure the matching wheel for your node as covered by PyTorch/CUDA guidelines.
+
+For a clean GPU runtime, DGX Spark aligns with Ubuntu 24.04 + CUDA 13.0 software stack; validate the node driver and CUDA stack before large sweeps.
+
+See also:
+- `PROJECT_DETAILS.md`
+
+[dgx-spark-software]: https://docs.nvidia.com/dgx/dgx-spark-porting-guide/porting/software-requirements.html
+
 ## Detailed workflow reference
 
 - For a full reproducibility walkthrough and command summary, see:

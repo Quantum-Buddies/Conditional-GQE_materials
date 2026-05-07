@@ -44,6 +44,8 @@ Conditional-GQE_materials/
 │   └── __init__.py
 ├── README.md
 ├── requirements.txt
+├── environment-dgx-spark.yml
+├── environment-dgx-spark-cudaq.yml
 └── PROJECT_DETAILS.md
 ```
 
@@ -56,6 +58,23 @@ Reference environment path used by this project:
 Core dependency file:
 
 - `requirements.txt`
+- `environment-dgx-spark.yml` (Miniconda environment recipe for full stack with optional CUDA-Q GQE extras)
+- `environment-dgx-spark-cudaq.yml` (one-step environment including `cudaq-solvers[gqe]`)
+
+DGX Spark baseline create flow:
+
+```bash
+conda env create -f environment-dgx-spark.yml
+conda activate conditional-gqe
+pip install cudaq-solvers[gqe]  # optional NVIDIA GQE baseline
+```
+
+CUDA-Q all-in-one create flow:
+
+```bash
+conda env create -f environment-dgx-spark-cudaq.yml
+conda activate conditional-gqe-cudaq
+```
 
 Installed runtime currently includes (and expects) CUDA-Q + CUDA-Q Solvers where applicable.
 

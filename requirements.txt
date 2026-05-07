@@ -1,11 +1,13 @@
+# Core Python dependencies for the Conditional-GQE suite
 pyyaml>=6.0
 numpy>=2.0
+scipy>=1.14
 torch>=2.0
+matplotlib>=3.9
+tqdm>=4.66
 openfermion>=1.7
 openfermionpyscf>=0.5
 pyscf>=2.13
 qiskit>=2.0
 qiskit-algorithms>=0.4
 qiskit-nature>=0.7
-matplotlib>=3.9
-tqdm>=4.66
