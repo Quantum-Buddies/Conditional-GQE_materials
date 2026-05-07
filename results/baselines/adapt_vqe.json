@@ -1,0 +1,22 @@
+{
+  "results": [
+    {
+      "system": "h2",
+      "baseline": "adapt_vqe",
+      "reference_energy": -1.8571019850484385,
+      "baseline_energy": -1.857101896738542,
+      "delta_energy": 8.83098965065443e-08,
+      "n_spin_orbitals": 4,
+      "mode": "compat_vqe"
+    },
+    {
+      "system": "lih",
+      "baseline": "adapt_vqe",
+      "reference_energy": -1.6562087348130008,
+      "baseline_energy": -1.6562078903307653,
+      "delta_energy": 8.444822354736203e-07,
+      "n_spin_orbitals": 4,
+      "mode": "compat_vqe"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "dataset",
+    "path": "benchmark_dataset_n_pauli_terms.png"
+  },
+  {
+    "kind": "baseline_bar",
+    "path": "benchmark_baseline_delta_energy_bars.png"
+  },
+  {
+    "kind": "baseline_scatter",
+    "path": "benchmark_baseline_delta_energy_scatter.png"
+  },
+  {
+    "kind": "training",
+    "path": "benchmark_training_loss_curve.png"
+  }
+]

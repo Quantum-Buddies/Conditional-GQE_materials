@@ -1,0 +1,9 @@
+section,system,metric,value
+dataset,h2,n_pauli_terms,15
+dataset,lih,n_pauli_terms,631
+dataset,beh2,n_pauli_terms,666
+dataset,n2,n_pauli_terms,2951
+baseline,h2,adapt_vqe_delta_energy,8.83098965065443e-08
+baseline,lih,adapt_vqe_delta_energy,8.444822354736203e-07
+baseline,h2,cudaq_vqe_delta_energy,4.017092812613754e-06
+training,seq_model,final_loss,4.140421882271767
