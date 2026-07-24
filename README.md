@@ -25,7 +25,7 @@
 
 Traditional Quantum Virtual Eigensolvers (VQEs) rely on manual, human-designed quantum circuits that are either too deep for real quantum hardware or get trapped in mathematical dead-ends called **barren plateaus** and **diagonal collapse**. 
 
-H-cGQE solves this by pairing a **Chemical Graph Neural Network (GNN)** and a **Transformer AI Model** with **Quality-Diversity Reinforcement Learning (QD-GRPO)**. The AI learns the fundamental patterns of quantum chemistry, generating ultra-compact quantum circuits tailored to specific molecules that achieve **chemical accuracy ($\le 1.6 \text{ mHa}$)** on real hardware and high-performance simulators.
+H-cGQE pairs a **Chemical Graph Neural Network (GNN)** and a **Transformer** with **Quality-Diversity Reinforcement Learning (QD-GRPO)** to amortize ansatz design: conditioned on molecular structure and the electronic Hamiltonian, the model proposes compact operator sequences whose continuous angles are refined classically (L-BFGS-B). The goal is chemical accuracy ($\le 1.6 \text{ mHa}$) within stated active spaces on simulators, with selective hardware checks.
 
 ```
 ┌────────────────────────┐      ┌────────────────────────┐      ┌────────────────────────┐
@@ -38,18 +38,18 @@ H-cGQE solves this by pairing a **Chemical Graph Neural Network (GNN)** and a **
 
 ---
 
-## 🏆 Key Breakthroughs & Benchmark Scores
+## 🏆 Key Results & Benchmark Scores
 
-| Benchmark / Molecule | Active Space / Qubits | C-GQE Energy Error | Baseline VQE Error | Highlight / Impact |
+| Benchmark / Molecule | Active Space / Qubits | Reported Metric | Baseline / Context | Highlight / Caveat |
 |---|---|---|---|---|
-| **Methyl Iodide ($\text{CH}_3\text{I}$)** | 12 Qubits | **$0.63 \text{ mHa}$** | $2.65 \text{ mHa}$ (GQE)<br>$988 \text{ mHa}$ (HEA-VQE) | **Sub-chemical accuracy** ($\le 1.6 \text{ mHa}$) achieved; $4\times$ better than standard GQE. |
-| **Hydrogen ($\text{H}_2$)** | 4 Qubits | **$1.47 \text{ mHa}$** | $3.20 \text{ mHa}$ (VQE) | Validated on **AWS Braket SV1** simulator with shot noise. |
-| **IQM Emerald QPU** | 8 Qubits | **$87.5\%$ Fidelity** | $45.0\%$ (Unoptimized) | 1024-shot hardware validation on physical superconducting QPU. |
-| **Benzene ($\text{C}_6\text{H}_6$)** | **40 Qubits** CAS(20e,20o) | **Exact Match** | Failed / OOM | Computed via **QSCI + MPS** in **19 seconds** on single NVIDIA GPU. |
-| **Ethylene ($\text{C}_2\text{H}_4$)** | **28 Qubits** | **Matrix Converged** | Failed | Full MPS bond dimension sweep ($D=32 \dots 256$) in 300 seconds. |
-| **34 GIC Molecules** | 4q – 24q | **$100\%$ Convergence** | $18\%$ Collapse | Zero diagonal collapse across entire GIC 2026 challenge suite. |
+| **Methyl Iodide ($\text{CH}_3\text{I}$)** | **8q** CAS(4e,4o) | **$0.63 \text{ mHa}$** vs active-space CASCI/FCI | $2.65 \text{ mHa}$ (CUDA-Q GQE)<br>$988 \text{ mHa}$ (HEA-VQE) | Sub-chemical accuracy ($\le 1.6 \text{ mHa}$) in a controlled 8q comparison (`results/phase3_final/benchmark_ch3i_consolidated.json`). Distinct from the larger GIC `methyl_iodide_cas12` Hamiltonian. |
+| **Hydrogen ($\text{H}_2$)** | 4 Qubits | **$1.48 \text{ mHa}$** GPU↔AWS SV1 gap | Shot-noise simulator cross-check | Cross-backend energy discrepancy on a shallow circuit (`results/eval/simulator_validation.json`); **not** an FCI error. |
+| **IQM Emerald QPU** | 8 Qubits | **$87.5\%$ state fidelity** | Ideal bitstring target | 1024-shot hardware run; fidelity is to the expected computational-basis string, **not** energy accuracy on QPU. |
+| **Benzene ($\text{C}_6\text{H}_6$)** | **40q** (QSCI/MPS path) | QSCI subspace estimate (~**19 s**) | Full SV OOM / infeasible | Runtime scaling demonstration; **not** a claim of exact FCI/CASCI match. See `results/phase3_final/qsci/`. |
+| **Ethylene ($\text{C}_2\text{H}_4$)** | **28 Qubits** | MPS bond-dim. sweep ($D=32\ldots256$) | Full SV stressful / often impractical | ~300 s single-GPU MPS convergence study; accuracy depends on bond dimension. |
+| **GIC molecule suite** | 4q – 28q | Conditioned generation + collapse mitigations | Diagonal / commuting collapse is a known GQE failure mode | UCCSD pools + entanglement constraints are designed to suppress Z-only collapse. **Suite-wide chemical-accuracy rates should be reported from eval JSONs, not assumed 100%.** |
 
-*Note: Chemical accuracy threshold is $1 \text{ kcal/mol} \approx 1.6 \text{ mHa}$. Reference energies are exact CASCI/FCI within the specified active spaces.*
+*Notes:* Chemical accuracy ≈ $1.6 \text{ mHa}$ ($\approx 1 \text{ kcal/mol}$). Where “exact” references appear below, they mean **CASCI/FCI within the stated active space**, not full CI in the complete basis. Held-out / zero-shot molecule generalization remains an open evaluation item.
 
 ---
 
@@ -292,7 +292,7 @@ flowchart LR
                        ▼
 ┌─────────────────────────────────────────────────────┐
 │  QSCI + FMO2 (28–40q)                               │
-│  ● Benzene CAS(20e,20o) 40q: ~19s via QSCI          │
+│  ● Benzene 40q: ~19s QSCI/MPS path (subspace estimate) │
 │  ● FMO2: fragment → evaluate → reassemble parent    │
 │  ● NOT brute-force statevector (scientifically wrong│
 │    for 32–40q JW chemistry circuits)                │
@@ -523,7 +523,7 @@ flowchart LR
     Brute -.->|"replaced by"| FMO2_P
 ```
 
-- **QSCI (Quantum Selected Configuration Interaction)**: Identifies key determinant subspaces from quantum circuit samples, enabling exact-like energy estimation for 40-qubit systems like Benzene CAS(20e,20o) in **19 seconds**.
+- **QSCI (Quantum Selected Configuration Interaction)**: Samples circuits to build a determinant subspace, then classically diagonalizes a reduced Hamiltonian. Used here as a **scaling path** for ~40q systems (e.g. benzene) when full statevector is infeasible — report subspace energies and wall time, **not** “exact FCI match,” unless an independent CASCI/FCI reference is provided.
 - **FMO2 (Fragment Molecular Orbital)**: Fragments large macromolecules into 8–12 qubit sub-units, evaluates them on quantum hardware, and reassembles parent energies via pairwise additive correction:
   $$E_{\text{FMO2}} = \sum_i E_i - \sum_{i<j} (E_{ij} - E_i - E_j)$$
 
@@ -540,13 +540,13 @@ To contextualize C-GQE against contemporary generative quantum eigensolvers, the
 | **Parameterization** | Discretized evolution times $e^{i P t_k}$ | Discretized evolution times / angle refinement | **Two-Stage: Discrete Topology $\rightarrow$ L-BFGS-B Continuous $\vec{\theta}$ Optimization** |
 | **Exploration & Diversity** | Inverse temperature schedule $\beta$ | Inverse temperature schedule $\beta$ | **MAP-Elites Quality-Diversity Archive (QD-GRPO)** |
 | **Diagonal Collapse Mitigation** | None | Temperature tuning | **UCCSD Excitations + Commutator Loss + Entropy Floor** |
-| **Generalization** | Single instance | Single instance | **Zero-Shot / Few-Shot Cross-Molecule Generalization** |
+| **Generalization** | Single instance | Single instance | **Conditioned for cross-molecule generation** (held-out energy tables still needed) |
 
 #### Core Methodological Advances over SpinGQE & GPT-QE
 
-1. **Cross-Molecule Generalization via Encoder-Decoder Conditioning**:
-   - *SpinGQE & GPT-QE Limit*: Both frameworks employ decoder-only architectures trained blindly on a single, fixed target Hamiltonian. Modifying molecular geometry (e.g., stretching $H_2$ bond length from $0.5\,\text{Å}$ to $2.0\,\text{Å}$) forces a complete retraining of the neural network from scratch.
-   - *H-cGQE Solution*: Our `HamiltonianEncoder` encodes the target Hamiltonian ($P_i$ Pauli terms, $c_i$ coefficients, $N_q, N_e$) into cross-attention memory, while our `ChemistryEncoder` (3-layer MPNN) provides soft prompt tokens. A single ~8M parameter model generalizes across 35 distinct molecules and bond geometries without retraining.
+1. **Cross-Molecule Conditioning via Encoder-Decoder**:
+   - *SpinGQE & GPT-QE Limit*: Decoder-only models are typically trained for a single fixed Hamiltonian; changing geometry often means retraining.
+   - *H-cGQE Approach*: `HamiltonianEncoder` + `ChemistryEncoder` (MPNN) condition a shared policy on $(H, \text{graph})$. This **enables** multi-molecule amortization; rigorous leave-one-family-out energy evaluation is the right test of whether that conditioning generalizes.
 
 2. **Policy Optimization (DAPO RL) vs. Weighted MSE Loss**:
    - *SpinGQE Limit*: SpinGQE uses a heuristic weighted MSE loss $L = \sum w(E) \cdot (\text{logits}_t - E_t)^2$ to force discrete categorical token logits to regress onto continuous energy values. This leads to vanishing gradients near energy plateaus.
@@ -570,9 +570,9 @@ The framework is benchmarked across the complete GIC 2026 challenge molecule sui
 |---|---|---|
 | **Small Diatomics / Hydrides** | $\text{H}_2$ (4 bond lengths), $\text{LiH}$ (4 bond lengths), $\text{BeH}_2$ (3 bond lengths), $\text{HF}$ | 4q – 14q |
 | **Organic & Volatile Compounds** | $\text{H}_2\text{O}$, $\text{NH}_3$, $\text{CH}_4$, Formaldehyde, Acetylene, Ethylene | 14q – 28q |
-| **Aromatic & Heterumetric Systems** | Benzene, Toluene, Anisole, o-Cresol, Phenol | 12q – 24q |
+| **Aromatic & Heteroaromatic Systems** | Benzene, Toluene, Anisole, o-Cresol, Phenol | 12q – 24q |
 | **Heavy-Atom & CAS Systems** | Methyl Iodide ($\text{CH}_3\text{I}$), Iodobenzene, IMePh, Diarylethene fragment | 12q – 24q |
-| **Challenge 40q Scaling Set** | Benzene CAS(20e,20o), $\text{N}_2$ cc-pVDZ CAS(20e,20o) | **40q** (QSCI/MPS) |
+| **Challenge 40q Scaling Set** | Benzene / $\text{N}_2$ large active spaces (QSCI/MPS path) | **40q** (subspace / TN estimates) |
 
 ---
 
@@ -894,7 +894,7 @@ Outputs per-molecule JSON manifests with QWC-grouped QASM 2.0 measurement circui
 
 - **Energy cache**: SQLite file ensures deterministic rewards across training runs
 - **MAP-Elites archives**: JSON-serialized per-molecule elite circuit libraries
-- **Chemical accuracy target**: ≤ 1.6 mHa (~1 kcal/mol) vs exact FCI
+- **Chemical accuracy target**: ≤ 1.6 mHa (~1 kcal/mol) vs CASCI/FCI **within the stated active space**
 - **QPU cost transparency**: Per-manifest cost estimates (0.0425 credits/shot + 30 credits/task on Cepheus)
 
 ---
