@@ -45,6 +45,17 @@ export NCCL_BLOCKING_WAIT=1
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-8}
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
+# CUDA-Q performance tuning (gate fusion + memory pool)
+# Gate fusion level 6: merges more consecutive gates for fewer GPU kernels
+# NVIDIA blog shows up to 10x speedup tuning this for specific circuits
+export CUDAQ_MGPU_FUSE=6
+# Allow FP32 emulated BF16 tensor-core kernels (faster observe on Ada/Hopper)
+export CUDAQ_ALLOW_FP32_EMULATED=1
+# CUDA-Q memory pool: reuse GPU allocations across observe() calls
+export CUDAQ_MEMPOOL=1
+# cuStateVec: use gate fusion level 6 for single-GPU nvidia target too
+export CUDAQ_FUSE=6
+
 HAMILTONIANS="${PROJECT_ROOT}/results/data/hamiltonians_gic2026/hamiltonians.json"
 ENERGY_CACHE="${PROJECT_ROOT}/results/train/rl_energy_cache.sqlite"
 PRETRAIN_DATA="${PROJECT_ROOT}/results/train/rl_pretrain_from_cache.json"
@@ -99,6 +110,9 @@ cd "${PROJECT_ROOT}"
     --use-cuda \
     --multi-gpu \
     --use-bf16 \
+    --torch-compile \
+    --compile-mode reduce-overhead \
+    --fused-optimizer \
     --no-dynamic-sampling \
     --token-level-loss \
     --entropy-coef 0.01 \
@@ -132,7 +146,6 @@ cd "${PROJECT_ROOT}"
     --qd-lbfgs-iters 3 \
     --qd-archive-path "${ARCHIVE_DIR}" \
     --energy-cache "${ENERGY_CACHE}" \
-    --cache-only \
     --theta 0.01 \
     --seed 42 \
     2>&1

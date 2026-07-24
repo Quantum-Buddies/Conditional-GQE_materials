@@ -527,6 +527,39 @@ flowchart LR
 - **FMO2 (Fragment Molecular Orbital)**: Fragments large macromolecules into 8–12 qubit sub-units, evaluates them on quantum hardware, and reassembles parent energies via pairwise additive correction:
   $$E_{\text{FMO2}} = \sum_i E_i - \sum_{i<j} (E_{ij} - E_i - E_j)$$
 
+### 7. Comparative Architectural Analysis: H-cGQE vs. SpinGQE & GPT-QE
+
+To contextualize C-GQE against contemporary generative quantum eigensolvers, the table below compares **H-cGQE** with **GPT-QE** (*NVIDIA / U. Toronto / St. Jude, arXiv:2401.09253*) and **SpinGQE** (*Mindbeam AI, March 2026, arXiv:2603.24298*):
+
+| Technical Dimension | **GPT-QE** (NVIDIA/Toronto, 2024) | **SpinGQE** (Mindbeam AI, March 2026) | **Our H-cGQE** (Quantum-Buddies, 2026) |
+|---|---|---|---|
+| **Target Systems** | Single-molecule Fermionic UCCSD ($H_2, LiH, N_2, CO_2$) | 4-qubit Heisenberg Spin Model | **35 GIC 2026 Molecular Hamiltonians** (4q–28q, extended to 40q) |
+| **Model Topology** | Unconditional Decoder-Only (GPT-2) | Unconditional Decoder-Only (GPT-2) | **Conditional Encoder-Decoder Transformer** |
+| **Conditioning Mode** | None (1 model per fixed molecule) | None (1 model per fixed Hamiltonian) | **Chemistry GNN + Hamiltonian Term Cross-Attention** |
+| **Training Objective** | Softmax Boltzmann weighting $\exp(-\beta E)$ | Weighted MSE Loss: $w(E) \cdot (l_t - E_t)^2$ | **DAPO Policy Gradient (GRPO)** + Asymmetric Clipping |
+| **Parameterization** | Discretized evolution times $e^{i P t_k}$ | Discretized evolution times / angle refinement | **Two-Stage: Discrete Topology $\rightarrow$ L-BFGS-B Continuous $\vec{\theta}$ Optimization** |
+| **Exploration & Diversity** | Inverse temperature schedule $\beta$ | Inverse temperature schedule $\beta$ | **MAP-Elites Quality-Diversity Archive (QD-GRPO)** |
+| **Diagonal Collapse Mitigation** | None | Temperature tuning | **UCCSD Excitations + Commutator Loss + Entropy Floor** |
+| **Generalization** | Single instance | Single instance | **Zero-Shot / Few-Shot Cross-Molecule Generalization** |
+
+#### Core Methodological Advances over SpinGQE & GPT-QE
+
+1. **Cross-Molecule Generalization via Encoder-Decoder Conditioning**:
+   - *SpinGQE & GPT-QE Limit*: Both frameworks employ decoder-only architectures trained blindly on a single, fixed target Hamiltonian. Modifying molecular geometry (e.g., stretching $H_2$ bond length from $0.5\,\text{Å}$ to $2.0\,\text{Å}$) forces a complete retraining of the neural network from scratch.
+   - *H-cGQE Solution*: Our `HamiltonianEncoder` encodes the target Hamiltonian ($P_i$ Pauli terms, $c_i$ coefficients, $N_q, N_e$) into cross-attention memory, while our `ChemistryEncoder` (3-layer MPNN) provides soft prompt tokens. A single ~8M parameter model generalizes across 35 distinct molecules and bond geometries without retraining.
+
+2. **Policy Optimization (DAPO RL) vs. Weighted MSE Loss**:
+   - *SpinGQE Limit*: SpinGQE uses a heuristic weighted MSE loss $L = \sum w(E) \cdot (\text{logits}_t - E_t)^2$ to force discrete categorical token logits to regress onto continuous energy values. This leads to vanishing gradients near energy plateaus.
+   - *H-cGQE Solution*: We frame circuit design as pure Reinforcement Learning via **DAPO (Decoupled Clip + Dynamic Sampling Policy Optimization)** with group-relative advantage $A_i = \frac{R_i - \mu_R}{\sigma_R}$. Asymmetric clipping ($\epsilon_{\text{low}}=0.2, \epsilon_{\text{high}}=0.28$) and token-level loss stabilize RL updates without surrogate MSE regression.
+
+3. **Decoupled Two-Stage Optimization (Topology vs. Continuous Rotation Angles)**:
+   - *SpinGQE & GPT-QE Limit*: Both models discretize continuous evolution times into discrete vocabulary tokens ($e^{i P_j t_k}$ for $t_k \in \{0.01, 0.05, 0.1, \dots\}$), causing vocabulary explosion and limiting expressivity.
+   - *H-cGQE Solution*: We decouple discrete structural topology from continuous parameterization. Stage 1 (Transformer) generates the discrete operator sequence $(P_{j_1}, P_{j_2}, \dots)$. Stage 2 (L-BFGS-B) optimizes the continuous rotation angles $\vec{\theta}$ over the exact CUDA-Q expectation landscape using `nvidia-mqpu`.
+
+4. **Quality-Diversity Archive (MAP-Elites) preventing Diagonal Collapse**:
+   - *SpinGQE & GPT-QE Limit*: Autoregressive transformers naturally collapse into generating commuting, single-qubit, or Z-only operators (diagonal sequence collapse) because they carry zero entanglement overhead.
+   - *H-cGQE Solution*: We maintain a 2D MAP-Elites archive (*Entanglement Density* $\times$ *Circuit Depth*). Rollouts discovering unoccupied topological niches receive intrinsic novelty bonuses, forcing the agent to learn non-commuting $X/Y$ entangling operators.
+
 ---
 
 ## 🧪 Comprehensive Molecule Inventory (35 GIC Molecules)
