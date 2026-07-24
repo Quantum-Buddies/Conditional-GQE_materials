@@ -53,39 +53,250 @@ H-cGQE solves this by pairing a **Chemical Graph Neural Network (GNN)** and a **
 
 ---
 
-## 📐 System Architecture & Dataflow
+## 📐 Visual Architecture & Dataflow
 
-The system integrates molecular graph encoding, Transformer circuit generation, MAP-Elites quality-diversity archive maintenance, classical gradient optimization, and hardware execution:
+### Diagram 1 — End-to-End Pipeline (High-Level)
+
+```mermaid
+flowchart LR
+    subgraph Chem ["🧪 Chemistry Input"]
+        direction TB
+        Mol["Molecular Geometry<br>(PySCF / OpenFermion)"]
+        Ham["Electronic Hamiltonian<br>Ĥ = Σ h_ℓ · P̂_ℓ<br>(Jordan–Wigner mapped)"]
+        Graph["Atom Graph<br>(Nodes: Z, hybridization<br>Edges: bond type, R_ij)"]
+        Mol --> Ham
+        Mol --> Graph
+    end
+
+    subgraph AI ["🤖 AI Circuit Synthesis"]
+        direction TB
+        GNN["Chemistry GNN Encoder<br>(3-layer Edge-Aware MPNN<br>→ Soft Prompt Tokens)"]
+        HEnc["Hamiltonian Encoder<br>(4-layer Transformer<br>→ Cross-Attention Memory)"]
+        Dec["Operator Pool Decoder<br>(6-layer Transformer<br>→ Autoregressive Tokens)"]
+        Pool["UCCSD Operator Pool<br>(Fermionic excitations<br>JW-mapped, 0% Z-only)"]
+        Graph --> GNN
+        Ham --> HEnc
+        Pool --> Dec
+        GNN -->|"Prefix Conditioning"| Dec
+        HEnc -->|"Cross-Attention K,V"| Dec
+        Dec -->|"j₁, j₂, …, jₖ"| Seq["Operator Sequence<br>A₁, A₂, …, Aₖ"]
+    end
+
+    subgraph Eval ["⚡ Energy Evaluation"]
+        direction TB
+        Cache{"B200 SQLite Cache<br>(24k+ entries)"}
+        LBFGS["Truncated L-BFGS-B<br>(3–5 iters, k angles<br>θ = (θ₁, …, θₖ) ∈ ℝᵏ)"]
+        CUDAQ["CUDA-Q Statevector<br>nvidia-mqpu (3× L40S)"]
+        Cache -->|"Hit → E_cached"| E["Energy<br>E = ⟨ψ₀|U†ĤU|ψ₀⟩"]
+        Cache -->|"Miss"| LBFGS
+        LBFGS --> CUDAQ
+        CUDAQ --> E
+        Seq --> Cache
+    end
+
+    subgraph RL ["🎯 QD-GRPO Policy Update"]
+        direction TB
+        Reward["Multi-Component Reward<br>R = w₁(−E/|E_ref|) + w₂(ent)<br>+ w₃(−depth) + λ·Novelty"]
+        ME["MAP-Elites Archive<br>(10×10 grid<br>Entanglement × Depth)"]
+        DAPO["DAPO Loss<br>Asymmetric Clip (ε_low=0.2<br>ε_high=0.28) + Token-level"]
+        E --> Reward
+        Reward --> ME
+        ME -->|"Novelty Bonus"| DAPO
+        DAPO -->|"∇θ Update"| Dec
+    end
+
+    subgraph Deploy ["🚀 Deployment"]
+        direction TB
+        QSCI["QSCI / MPS<br>28–40q Scaling"]
+        QPU["qBraid QPU<br>4–12q Hardware"]
+        FMO["FMO2 Reconstruction<br>Fragment → Parent"]
+        ME -->|"Elite Circuits"| QSCI
+        ME -->|"Shallow Circuits"| QPU
+        ME -->|"Fragments"| FMO
+    end
+
+    Chem ==> AI ==> Eval ==> RL ==> Deploy
+```
+
+### Diagram 2 — Internal Transformer Architecture (Technical)
 
 ```mermaid
 flowchart TD
-    subgraph Input ["1. Chemical & Physical Input"]
-        M[Molecular Graph & Geometry] --> GNN[Chemistry GNN Encoder]
-        H[Electronic Hamiltonian] --> Enc[Hamiltonian Transformer Encoder]
+    subgraph Input_Layer ["Input Processing"]
+        Atoms["Atom Features<br>(Z, charge, hybrid,<br>valence, aromaticity)"]
+        Bonds["Bond Features<br>(bond order, R_ij,<br>conjugation)"]
+        Globals["Global Features<br>(N_q, N_e, spin 2S+1,<br>active space size)"]
+        PauliIDs["Pauli Term IDs<br>(P̂_ℓ → integer tokens)"]
+        Coeffs["Coefficients<br>(h_ℓ ∈ ℝ)"]
+        TermMask["Term Mask<br>(valid terms only)"]
     end
 
-    subgraph Core ["2. AI Circuit Synthesis (H-cGQE)"]
-        GNN --> |Soft Prompt Embeddings| Dec[Operator Pool Decoder]
-        Enc --> |Cross-Attention Memory| Dec
-        Dec --> |Autoregressive Tokens| Seq[Pauli Operator Sequence]
+    subgraph GNN_Layer ["Chemistry GNN Encoder (3 layers)"]
+        NodeIn["Node Linear<br>→ hidden_dim=128"]
+        EdgeIn["Edge Linear<br>→ hidden_dim=128"]
+        GlobIn["Global Linear<br>→ hidden_dim=128"]
+        MP1["MessageBlock 1<br>(edge-weighted aggregation)"]
+        MP2["MessageBlock 2<br>(residual + LayerNorm)"]
+        MP3["MessageBlock 3<br>(residual + LayerNorm)"]
+        Readout["Graph Readout<br>(mean + max pool<br>→ latent_dim=128)"]
+        Prefix["Prefix Projection<br>→ conditioning_dim=128<br>+ LayerNorm"]
+        Atoms --> NodeIn
+        Bonds --> EdgeIn
+        Globals --> GlobIn
+        NodeIn --> MP1 --> MP2 --> MP3 --> Readout --> Prefix
     end
 
-    subgraph Optimization ["3. Hybrid Parameter & Diversity Tuning"]
-        Seq --> Cache{B200 Energy Cache}
-        Cache -- Cache Hit --> E1[Stored Energy]
-        Cache -- Miss (Online) --> LBFGS[Truncated L-BFGS-B Angle Opt]
-        LBFGS --> CUDA[CUDA-Q Simulator / QPU]
-        CUDA --> E2[Evaluated Energy]
-        E1 & E2 --> ME[MAP-Elites Archive Grid]
-        ME --> |Novelty Bonus + Reward| RL[DAPO / QD-GRPO Policy Update]
-        RL --> |Gradient Update| Dec
+    subgraph HamEnc_Layer ["Hamiltonian Encoder (4 layers)"]
+        PauliEmb["Pauli Embedding<br>(vocab → d_model=256)"]
+        CoeffProj["Coefficient Projection<br>(scalar → d_model)"]
+        PosEnc["Positional Encoding<br>(sinusoidal)"]
+        EncL1["Encoder Layer 1<br>(8-head self-attention<br>+ FFN=1024 + Dropout)"]
+        EncL2["Encoder Layer 2"]
+        EncL3["Encoder Layer 3"]
+        EncL4["Encoder Layer 4"]
+        Mem["Encoder Memory<br>H_mem ∈ ℝ^{M×256}"]
+        PauliIDs --> PauliEmb
+        Coeffs --> CoeffProj
+        PauliEmb --> PosEnc
+        CoeffProj --> PosEnc
+        PosEnc --> EncL1 --> EncL2 --> EncL3 --> EncL4 --> Mem
+        TermMask -.->|"padding mask"| EncL1
     end
 
-    subgraph Execution ["4. Large-Scale & QPU Deployment"]
-        ME --> |Elite Circuits| QSCI[QSCI / MPS 28–40q Scaling]
-        ME --> |Shallow Circuits| QPU[qBraid QPU Execution]
-        ME --> |Fragments| FMO[FMO2 Parent Reconstruction]
+    subgraph Decoder_Layer ["Operator Pool Decoder (6 layers)"]
+        PrefixTokens["Soft Prompt Tokens<br>(from GNN Prefix)"]
+        BOS["BOS Token"]
+        DecL1["Decoder Layer 1<br>(8-head self-attn<br>+ 8-head cross-attn<br>+ FFN=1024)"]
+        DecL2["Decoder Layer 2"]
+        DecL3["Decoder Layer 3"]
+        DecL4["Decoder Layer 4"]
+        DecL5["Decoder Layer 5"]
+        DecL6["Decoder Layer 6"]
+        Logits["Output Logits<br>∈ ℝ^{L} per step<br>(L = vocab size)"]
+        Sample["Top-p Sampling<br>(p=0.9, temp=1.0)"]
+        ZMask["Z-Only Token Mask<br>(force_entanglement)"]
+        LenMask["Length Token Mask<br>(n_qubits filter)"]
+        PrefixTokens --> DecL1
+        BOS --> DecL1
+        Mem -->|"K, V cross-attn"| DecL1
+        DecL1 --> DecL2 --> DecL3 --> DecL4 --> DecL5 --> DecL6 --> Logits
+        ZMask -.->|"block Z-only"| Sample
+        LenMask -.->|"block oversize"| Sample
+        Logits --> Sample
+        Sample -->|"j₁"| NextTok["Next Token"]
+        NextTok -->|"autoregressive<br>feedback"| DecL1
     end
+
+    Prefix ==>|"conditioning"| PrefixTokens
+```
+
+### Diagram 3 — RL Training Loop & Reward Decomposition
+
+```mermaid
+flowchart TD
+    Start(("Start Epoch"))
+    Sample["Sample N=16 circuits<br>per molecule via<br>autoregressive decoder"]
+    Eval["Evaluate Energies<br>via Cache or L-BFGS-B"]
+    Reward["Compute Multi-Component Reward"]
+    Adv["GRPO Group-Relative<br>Advantages<br>A_i = (R_i − μ_R) / (σ_R + ε)"]
+    DynCheck{"std(R) > 1e-8?"}
+    Skip["Skip: Dynamic Sampling<br>Filter (zero advantage)"]
+    MEUpdate["Update MAP-Elites<br>Archive (10×10 grid)"]
+    Novelty["Compute Novelty Bonus<br>λ · N(circuit)"]
+    DAPO["DAPO Policy Loss<br>L = −min(r·A, clip(r, ε_lo, ε_hi)·A)<br>r = π_θ / π_old"]
+    Entropy["Entropy Bonus<br>H = −Σ p·log(p)"]
+    REPO["REPO Log-Prob Penalty<br>β · |log π_old|²"]
+    Loss["Total Loss<br>L_total = L_DAPO + c_H·H + c_β·REPO"]
+    GradAcc["Gradient Accumulation<br>(4 micro-batches)"]
+    Update["Optimizer Step<br>(Adam, lr=1e-5)"]
+    Buffer["Replay Buffer<br>(FIFO, size=2000<br>+ Pretrain mixing 80%→0%)"]
+    Next(("Next Epoch"))
+
+    Start --> Sample --> Eval --> Reward --> Adv --> DynCheck
+    DynCheck -->|"No"| Skip --> Next
+    DynCheck -->|"Yes"| MEUpdate --> Novelty
+    Novelty --> DAPO
+    DAPO --> Entropy --> REPO --> Loss
+    Loss --> GradAcc --> Update
+    Update --> Buffer
+    Buffer -->|"inject pretrain<br>samples"| Sample
+    Update --> Next
+
+    subgraph Reward_Components ["Reward Decomposition"]
+        R1["w₁ = 1.0<br>Energy: −E/|E_ref|<br>(normalized)"]
+        R2["w₂ = 0.1<br>Entanglement: frac(X/Y)<br>(multi-qubit gates)"]
+        R3["w₃ = 0.05<br>Depth: −depth/max_len<br>(prefer shallow)"]
+        R4["w₄ = 0.05<br>Non-Commuting: frac([A_i, A_j]≠0)"]
+        R5["λ = 1.0→0.1<br>Novelty: MAP-Elites<br>cell coverage bonus"]
+        R6["Gate: HF improvement<br>required for aux<br>rewards to activate"]
+    end
+
+    Reward --- Reward_Components
+```
+
+### Diagram 4 — VQE vs C-GQE Comparison
+
+```mermaid
+flowchart LR
+    subgraph VQE ["Traditional VQE"]
+        direction TB
+        VAns["Fixed Ansatz<br>(UCCSD / HEA)<br>Human-designed"]
+        VParam["k continuous params<br>θ ∈ ℝᵏ on quantum device"]
+        VGrad["Parameter-Shift Gradient<br>2k circuit evals per step"]
+        VOpt["Classical Optimizer<br>(L-BFGS-B / COBYLA)"]
+        VBP["⚠️ Barren Plateaus<br>∂E/∂θ → 0 exponentially<br>with system size"]
+        VAns --> VParam --> VGrad --> VOpt
+        VGrad -.->|"large k"| VBP
+    end
+
+    subgraph CGQE ["Conditional-GQE (Ours)"]
+        direction TB
+        CInput["Molecular Graph + Ĥ<br>(chemistry-conditioned)"]
+        CAI["Transformer Policy<br>~8M params (classical)"]
+        CSeq["Discrete Operator Seq<br>[A₁, …, Aₖ] from UCCSD pool"]
+        CLBFGS["L-BFGS-B Angle Opt<br>(classical, fast)"]
+        CEval["Single CUDA-Q observe<br>per candidate circuit"]
+        CInput --> CAI --> CSeq --> CLBFGS --> CEval
+        CEval -->|"reward"| CAI
+    end
+
+    VQE ==>|"key difference:<br>all optimizable params<br>are CLASSICAL (in the<br>transformer, not the<br>quantum circuit)"| CGQE
+```
+
+### Diagram 5 — Qubit Scaling Spectrum
+
+```
+  4q         12q         20q         28q         40q
+  │           │           │           │           │
+  ▼           ▼           ▼           ▼           ▼
+┌─────┐   ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐
+│ H₂  │   │ LiH │    │ N₂  │    │ C₂H₄│    │C₆H₆│
+│ (4q)│   │(12q)│    │(20q)│    │(28q)│    │(40q)│
+└──┬──┘   └──┬──┘    └──┬──┘    └──┬──┘    └──┬──┘
+   │         │          │          │          │
+   ▼         ▼          ▼          ▼          ▼
+┌─────────────────────────────────────────────────────┐
+│  CUDA-Q Statevector (nvidia-mqpu, 3× L40S)          │
+│  ● Fast: <1s per circuit    ● RL training rewards   │
+│  ● B200 SQLite Cache (24k+ entries)                 │
+│  ● QPU Validation (qBraid: IQM, Rigetti)            │
+└──────────────────────┬──────────────────────────────┘
+                       │ 24q threshold (PCIe L40S)
+                       ▼
+┌─────────────────────────────────────────────────────┐
+│  MPS Tensor Network (bond dim D=32…256)             │
+│  ● Ethylene 28q: ~300s on single L40S               │
+│  ● Bond convergence sweep required for accuracy     │
+└──────────────────────┬──────────────────────────────┘
+                       │ 28q threshold
+                       ▼
+┌─────────────────────────────────────────────────────┐
+│  QSCI + FMO2 (28–40q)                               │
+│  ● Benzene CAS(20e,20o) 40q: ~19s via QSCI          │
+│  ● FMO2: fragment → evaluate → reassemble parent    │
+│  ● NOT brute-force statevector (scientifically wrong│
+│    for 32–40q JW chemistry circuits)                │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -93,18 +304,93 @@ flowchart TD
 ## 🔬 In-Depth Nuances & Technical Pillars
 
 ### 1. The Chemistry GNN Encoder (`ChemistryEncoder`)
-Unlike standard NLP transformers, C-GQE features an **Edge-Aware Message-Passing Graph Neural Network** (`src/gqe/models/chemistry_encoder.py`) that encodes the physical topology of the molecule:
-- **Node Features**: Atomic numbers, hybridization states, formal charges, valence.
-- **Edge Features**: Chemical bond types, 3D interatomic distances $R_{ij}$.
-- **Global Invariants**: Active space qubit count $N_q$, total electron count $N_e$, spin multiplicity.
-- **Mechanism**: Message passing over molecular bonds outputs latent vectors projected into **soft prompt tokens** that condition the circuit generation decoder.
+
+Unlike standard NLP transformers, C-GQE features an **Edge-Aware Message-Passing Graph Neural Network** (`src/gqe/models/chemistry_encoder.py`) that encodes the physical topology of the molecule — conceptually analogous to how AlphaFold's Evoformer processes structural relationships:
+
+```mermaid
+flowchart LR
+    subgraph Graph ["Molecular Graph Input"]
+        direction TB
+        N["Nodes (Atoms)<br>• Atomic number Z<br>• Hybridization (sp/sp²/sp³)<br>• Formal charge<br>• Valence electrons<br>• Aromaticity flag"]
+        E["Edges (Bonds)<br>• Bond order (1/2/3)<br>• 3D distance R_ij (Å)<br>• Conjugation<br>• Ring membership"]
+        G["Globals<br>• N_q (qubit count)<br>• N_e (electron count)<br>• Spin 2S+1<br>• Active space (n_occ, n_virt)"]
+    end
+
+    subgraph MPNN ["Edge-Aware Message Passing (3 layers)"]
+        direction TB
+        H0["h_v⁰ = Linear(node_feat)<br>e_vw⁰ = Linear(edge_feat)<br>g⁰ = Linear(global_feat)"]
+        H1["Layer ℓ+1:<br>h_v^{ℓ+1} = h_v^ℓ + Σ_{w∈N(v)} σ(W·[h_w^ℓ, e_vw^ℓ, g^ℓ])<br>+ LayerNorm + Dropout(0.1)"]
+        H2["Layer ℓ+2:<br>Same structure, residual connections"]
+        H3["Layer ℓ+3:<br>Same structure, residual connections"]
+        H0 --> H1 --> H2 --> H3
+    end
+
+    subgraph Readout ["Graph Readout → Conditioning"]
+        direction TB
+        Pool["Pooled = concat[mean(h_v), max(h_v),<br>sum(h_v), g_final]<br>→ Linear → GELU → Dropout<br>→ Linear → latent_dim=128"]
+        Norm["LayerNorm(latent)"]
+        Proj["Prefix Projection:<br>Linear(128→128) → GELU<br>→ Linear(128→128) → LayerNorm<br>→ Soft Prompt Tokens"]
+        Pool --> Norm --> Proj
+    end
+
+    Graph ==> MPNN ==> Readout
+    Proj -->|"prefix conditioning"| Decoder["Operator Pool Decoder"]
+```
+
+- **Node Features**: Atomic numbers, hybridization states, formal charges, valence, aromaticity.
+- **Edge Features**: Chemical bond types, 3D interatomic distances $R_{ij}$, conjugation, ring membership.
+- **Global Invariants**: Active space qubit count $N_q$, total electron count $N_e$, spin multiplicity $2S+1$.
+- **Mechanism**: 3 layers of edge-weighted message passing → dual pooling (mean + max) → projection to **soft prompt tokens** that prefix-condition the decoder's cross-attention.
+- **Why GNN?** The molecular graph topology (bond connectivity, atom types) determines which fermionic excitations are chemically relevant. A flat MLP on atom counts would miss the graph structure — the GNN captures local chemical environments (e.g., "this carbon is in an aromatic ring with two neighbors") that inform operator selection.
 
 ### 2. Solving "Diagonal Sequence Collapse"
+
 In early GQE implementations, AI agents discovered a "lazy shortcut": generating commuting $Z$-basis operators (e.g., $IZIZ$, $ZZII$). Because these operators commute with the Hartree-Fock state, their energy gradients are identically zero ($\frac{\partial E}{\partial \theta} = 0$). Classical optimizers trap them at $E = E_{\text{HF}}$, killing training gradient variance (`std(rewards) = 0`).
+
+```
+  ❌ COLLAPSED SEQUENCE (Z-only, commuting)         ✅ ENTANGLED SEQUENCE (UCCSD, non-commuting)
+  ┌─────────────────────────────────┐               ┌─────────────────────────────────┐
+  │  A₁ = IZIZ  (Z-only)            │               │  A₁ = YZXI  (X+Y entangling)    │
+  │  A₂ = ZZII  (Z-only)            │               │  A₂ = XZYI  (X+Y entangling)    │
+  │  A₃ = IZIZ  (duplicate)         │               │  A₃ = IYZX  (X+Y entangling)    │
+  │  A₄ = ZIIZ  (Z-only)            │               │  A₄ = ZXIY  (X+Y entangling)    │
+  │                                 │               │                                 │
+  │  [A_i, A_j] = 0 ∀ i,j           │               │  [A_i, A_j] ≠ 0 (non-commuting) │
+  │  ∂E/∂θ_i = 0 (zero gradient)    │               │  ∂E/∂θ_i ≠ 0 (non-zero grad)    │
+  │  E = E_HF (trapped at baseline) │               │  E < E_HF (energy improvement)  │
+  │  std(rewards) = 0 → no learning │               │  std(rewards) > 0 → RL learns   │
+  └─────────────────────────────────┘               └─────────────────────────────────┘
+```
+
 - **Our Solution**:
-  1. **UCCSD Operator Pool**: Built from fermionic single/double excitations mapped via Jordan-Wigner, guaranteeing entangling $X/Y$ operations.
-  2. **Entanglement Enforcement**: Mandatory multi-qubit entangler sampling during early exploration.
-  3. **Commutator Penalty**: Explicit reward penalty for commuting operator sequences.
+  1. **UCCSD Operator Pool**: Built from fermionic single/double excitations mapped via Jordan-Wigner, guaranteeing entangling $X/Y$ operations. Zero Z-only operators by construction.
+  2. **Entanglement Enforcement**: `force_entanglement=True` in the decoder masks Z-only tokens during sampling, ensuring at least one multi-qubit entangler per sequence.
+  3. **Commutator Penalty**: Explicit reward penalty $w_4 \cdot \text{frac}([A_i, A_j] \neq 0)$ for commuting operator sequences.
+
+```mermaid
+flowchart LR
+    subgraph JW ["Jordan–Wigner Mapping"]
+        direction TB
+        Fermion["Fermionic Excitation<br>a†_p a_q (single)<br>a†_p a†_q a_r a_s (double)"]
+        JWMap["JW Transform:<br>a†_p → (X_p - iY_p)/2 ⊗ Z_{p-1}...Z_0"]
+        Pauli["Pauli Words:<br>YZXI, XZYI, IYZX, ...<br>(always contain X/Y)"]
+        Fermion --> JWMap --> Pauli
+    end
+
+    subgraph Pool ["Operator Pool Construction"]
+        direction TB
+        Singles["Single Excitations:<br>τ_pq = a†_p a_q − h.c.<br>→ 2 Pauli words each"]
+        Doubles["Double Excitations:<br>τ_pqrs = a†_p a†_q a_r a_s − h.c.<br>→ 8 Pauli words each"]
+        Scale["Scale Factors:<br>θ_scale = 1/√(N_excitations)<br>(normalization)"]
+        Singles --> Pool2["Combined Pool<br>0% Z-only guaranteed"]
+        Doubles --> Pool2
+        Pool2 --> Scale
+    end
+
+    JW ==> Pool
+```
+
+**Verified pool statistics**: H₂ (4q): 16 Pauli words, 0 Z-only, 192 pool entries. LiH (12q): 1,408 Pauli words, 0 Z-only. N₂ (20q): 11,088 Pauli words, 0 Z-only. BeH₂ (14q): 3,456 Pauli words, 0 Z-only.
 
 ### 3. Quality-Diversity RL: QD-GRPO with MAP-Elites
 Standard Policy Gradient methods (PPO/GRPO) suffer from mode collapse, finding only one circuit structure. We implement **MAP-Elites QD-GRPO** (`src/gqe/rl/map_elites.py`):
@@ -113,31 +399,133 @@ Standard Policy Gradient methods (PPO/GRPO) suffer from mode collapse, finding o
   $$\text{Reward} = w_1 \cdot \left(-\frac{E}{|E_{\text{ref}}|}\right) + w_2 \cdot \text{Entanglement} + \lambda \cdot \text{Novelty}$$
 - As coverage exceeds $50\%$, $\lambda$ decays adaptively to shift focus to energy refinement.
 
-```
- MAP-Elites Archive Grid (Entanglement Density vs. Depth)
- ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
- │   │   │ ★ │   │   │   │   │   │   │   │  High Entanglement
- ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤  ★ = Elite Circuit
- │   │ ★ │   │ ★ │   │   │   │   │   │   │  (Lowest energy found
- ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤   in feature cell)
- │   │   │ ★ │   │ ★ │   │   │   │   │   │
- └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
-   Low Depth ──────────────────► High Depth
+```mermaid
+flowchart LR
+    subgraph Archive ["MAP-Elites Archive — Per-Molecule Elite Library"]
+        direction TB
+        Grid["10×10 Grid<br>Axis 1: Entanglement Density<br>  (frac of X/Y multi-qubit ops)<br>Axis 2: Circuit Depth<br>  (gate count / max_seq_len)"]
+        Cell["Each Cell stores:<br>• Best operator sequence [A₁,…,Aₖ]<br>• Optimized angles θ*<br>• Energy E* = ⟨ψ₀|U†ĤU|ψ₀⟩<br>• Generation (epoch discovered)<br>• Visit count"]
+        Coverage["Coverage Tracking:<br>• filled_cells / 100<br>• λ = 1.0 when coverage < 25%<br>• λ = 0.5 when coverage 25–50%<br>• λ = 0.1 when coverage > 50%<br>• λ = 0.0 when coverage > 80%"]
+        Grid --> Cell --> Coverage
+    end
+
+    subgraph Selection ["Elite Selection for Replay"]
+        direction TB
+        Sample2["Sample from archive:<br>• 60% from filled cells (weighted by energy)<br>• 30% from empty cells (novelty-driven)<br>• 10% random exploration"]
+        Inject["Inject into replay buffer<br>alongside online samples"]
+        Sample2 --> Inject
+    end
+
+    Archive --> Selection
+    Selection -->|"pretrain mixing"| Buffer["Replay Buffer"]
 ```
 
 ### 4. L-BFGS-B Angle Fine-Tuning
-For a generated sequence $[A_1, A_2, \dots, A_k]$, each operator $A_i$ requires a continuous rotation angle $\theta_i$. 
-- During RL training, full optimization is too slow. We use **Truncated L-BFGS-B** (3–5 iterations) as a surrogate energy signal, achieving Spearman rank correlation $\rho \approx 0.5$ with converged energies while running $50\times$ faster.
-- During final evaluation, L-BFGS-B runs to full machine precision.
+
+For a generated sequence $[A_1, A_2, \dots, A_k]$, each operator $A_i = e^{i\theta_i \hat{P}_i}$ requires a continuous rotation angle $\theta_i \in \mathbb{R}$. The energy landscape is:
+$$E(\boldsymbol{\theta}) = \langle \psi_0 | U_{j_k}^\dagger \cdots U_{j_1}^\dagger \hat{H} U_{j_1} \cdots U_{j_k} | \psi_0 \rangle$$
+
+```mermaid
+sequenceDiagram
+    participant Policy as Transformer Policy
+    participant Eval as Energy Evaluator
+    participant CUDAQ as CUDA-Q Simulator
+    participant LBFGS as L-BFGS-B Optimizer
+
+    Policy->>Eval: Generate operator seq [A₁, A₂, …, Aₖ]
+    Eval->>Eval: Check DedupCache (MD5 hash of ops)
+    alt Cache Hit
+        Eval-->>Policy: Return cached E* (μs)
+    else Cache Miss
+        Eval->>LBFGS: Initialize θ₀ = (0.01, …, 0.01)
+        loop Iterations 1..max_iters
+            LBFGS->>CUDAQ: observe(kernel, Ĥ, n_qubits, n_e, pauli_words, θ)
+            CUDAQ-->>LBFGS: E = ⟨ψ|Ĥ|ψ⟩ (expectation value)
+            LBFGS->>LBFGS: Approximate inverse Hessian
+            LBFGS->>LBFGS: Line search + Wolfe conditions
+            LBFGS->>LBFGS: Update θ ← θ + Δθ
+        end
+        LBFGS-->>Eval: Return E* (optimized)
+        Eval->>Eval: Store in DedupCache
+        Eval-->>Policy: Return E* (ms–s depending on n_qubits)
+    end
+```
+
+- **Truncated mode (RL training)**: 3–5 iterations, $\theta_0 = 0.01$, Spearman $\rho \approx 0.5$ with converged energies, $50\times$ faster than full opt.
+- **Full mode (final evaluation)**: 200 iterations, $\text{ftol} = 10^{-10}$, machine-precision convergence.
+- **Why L-BFGS-B?** BFGS approximates the inverse Hessian $H^{-1}$ using rank-2 updates from gradient evaluations — no explicit Hessian computation needed. The bounded variant (L-BFGS-B) handles box constraints on $\theta_i \in [-\pi, \pi]$.
+- **DedupCache**: MD5 hash of operator sequence → energy. Identical circuits are never re-evaluated. SQLite-backed for persistence across training runs.
 
 ### 5. B200 Energy Cache & Offline RL Pretraining
-- **SQLite Cache**: Stores over **24,000+** evaluated circuit hash $\to$ energy pairs (`results/train/rl_energy_cache.sqlite`).
-- **Offline Pretraining**: Uses `src/gqe/data/cache_to_pretrain.py` to pre-fill the replay buffer with 17,408 recovered circuit sequences across 34 molecules. This allows **100% offline RL policy updates** without wasting GPU time on repeated CUDA-Q statevector simulations.
+
+```mermaid
+flowchart TD
+    subgraph Cache_Build ["Stage 1: Cache Precompute (B200 GPU)"]
+        direction TB
+        Mols1["35 GIC Molecules<br>(4–28 qubits)"]
+        Gen["For each molecule:<br>• Build UCCSD operator pool<br>• Sample 500–2000 random sequences<br>• L-BFGS-B optimize angles<br>• CUDA-Q observe → E*"]
+        Store["SQLite: (MD5_hash, energy,<br>molecule, n_qubits, operators)<br>24,000+ entries"]
+        Mols1 --> Gen --> Store
+    end
+
+    subgraph Recovery ["Stage 2: Cache → Pretrain JSON"]
+        direction TB
+        Load["Load SQLite cache"]
+        Replay2["Replay deterministic<br>circuit generation<br>(same seed → same ops)"]
+        Match["Match hash → recover<br>(operators, energy) pairs"]
+        Export["Export JSON:<br>17,408 samples across 34 molecules"]
+        Load --> Replay2 --> Match --> Export
+    end
+
+    subgraph Offline ["Stage 3: Offline RL Training (Any GPU)"]
+        direction TB
+        Prefill["Pre-fill replay buffer<br>80% pretrain fraction<br>→ 1,600 cached samples"]
+        Train["DAPO policy updates<br>using cached energies<br>NO CUDA-Q needed"]
+        Decay["Pretrain fraction decays<br>80% → 0% over 100 epochs<br>→ smooth online transition"]
+        Prefill --> Train --> Decay
+    end
+
+    Cache_Build ==> Recovery ==> Offline
+```
+
+- **SQLite Cache**: 24,000+ entries keyed by MD5 hash of operator sequence (`results/train/rl_energy_cache.sqlite`).
+- **Offline Pretraining**: `src/gqe/data/cache_to_pretrain.py` recovers 17,408 (operators, energy) pairs by replaying deterministic circuit generation. This allows **100% offline RL policy updates** without CUDA-Q.
+- **Cache-only mode**: `--cache-only` flag returns HF energy penalty for cache misses, enabling training on any GPU without CUDA-Q installed.
 
 ### 6. Scaling to 40 Qubits: QSCI & FMO2
-Direct statevector simulation breaks above 28 qubits. To tackle 32–40 qubit systems required by the GIC challenge, we deploy two scientific scaling pillars:
-- **QSCI (Quantum Selected Configuration Interaction)**: Identifies key determinant subspaces from quantum circuits, enabling exact-like energy estimation for 40-qubit systems like Benzene CAS(20e,20o).
-- **FMO2 (Fragment Molecular Orbital)**: Fragments large macromolecules into 8–12 qubit sub-units, evaluates them on quantum hardware, and reassembles parent energies.
+
+Direct statevector simulation breaks above 28 qubits ($2^{28} \approx 268$M amplitudes). To tackle 32–40 qubit systems required by the GIC challenge, we deploy two scientific scaling pillars:
+
+```mermaid
+flowchart LR
+    subgraph Brute ["Brute-Force SV (❌ Infeasible)"]
+        SV["2⁴⁰ = 1.1×10¹²<br>amplitudes<br>~1 TB GPU memory<br>→ OOM on any GPU"]
+    end
+
+    subgraph QSCI_P ["QSCI (✅ 28–40q)"]
+        direction TB
+        Sample3["Sample quantum circuit<br>→ bitstring distribution"]
+        Select["Select top-K determinants<br>by probability (K ~ 1000)"]
+        Subspace["Build subspace Hamiltonian<br>H_sub ∈ ℂ^{K×K}"]
+        Diag["Classical diagonalization<br>E = eigmin(H_sub)"]
+        Sample3 --> Select --> Subspace --> Diag
+    end
+
+    subgraph FMO2_P ["FMO2 (✅ Macromolecules)"]
+        direction TB
+        Frag["Fragment molecule into<br>monomers + dimers<br>(8–12 qubits each)"]
+        EvalF["Evaluate each fragment<br>on GPU or QPU"]
+        Reassemble["Reassemble parent energy:<br>E_FMO2 = Σ E_i − Σ E_ij<br>(pairwise correction)"]
+        Frag --> EvalF --> Reassemble
+    end
+
+    Brute -.->|"replaced by"| QSCI_P
+    Brute -.->|"replaced by"| FMO2_P
+```
+
+- **QSCI (Quantum Selected Configuration Interaction)**: Identifies key determinant subspaces from quantum circuit samples, enabling exact-like energy estimation for 40-qubit systems like Benzene CAS(20e,20o) in **19 seconds**.
+- **FMO2 (Fragment Molecular Orbital)**: Fragments large macromolecules into 8–12 qubit sub-units, evaluates them on quantum hardware, and reassembles parent energies via pairwise additive correction:
+  $$E_{\text{FMO2}} = \sum_i E_i - \sum_{i<j} (E_{ij} - E_i - E_j)$$
 
 ---
 
@@ -334,6 +722,39 @@ This runs 5 verification tests: DedupCache SQLite persistence, offline RL cache-
 ### Full Pipeline
 
 The Phase 3 pipeline is a 3-stage hybrid GPU→GPU→QPU workflow:
+
+```mermaid
+flowchart LR
+    subgraph S1 ["Stage 1: Precompute (B200)"]
+        direction TB
+        H1["Generate Hamiltonians<br>(PySCF → JW mapping)"]
+        H2["H-cGQE Inference<br>(sample 500–2000 circuits<br>per molecule)"]
+        H3["L-BFGS-B + CUDA-Q<br>observe → energy"]
+        H4[("SQLite Cache<br>24k+ entries")]
+        H1 --> H2 --> H3 --> H4
+    end
+
+    subgraph S2 ["Stage 2: Offline RL (L40S)"]
+        direction TB
+        R1["Load cache →<br>pretrain JSON"]
+        R2["Pre-fill replay buffer<br>(80% pretrain fraction)"]
+        R3["QD-GRPO training<br>DAPO + MAP-Elites<br>+ novelty bonus"]
+        R4["RL-tuned checkpoint<br>h_cgqe_rl_dapo_phase3.pt"]
+        R1 --> R2 --> R3 --> R4
+    end
+
+    subgraph S3 ["Stage 3: QPU Validation"]
+        direction TB
+        Q1["Generate QWC manifests<br>(QASM 2.0 export)"]
+        Q2["qBraid submission<br>→ Rigetti Cepheus<br>(108q superconducting)"]
+        Q3["Retrieve + parse<br>shot counts → expectations"]
+        Q4["Compare: QPU vs SV<br>vs exact FCI"]
+        Q1 --> Q2 --> Q3 --> Q4
+    end
+
+    S1 ==>|"rl_energy_cache.sqlite"| S2
+    S2 ==>|"RL checkpoint<br>+ MAP-Elites archive"| S3
+```
 
 | Stage | Hardware | What Happens | Script |
 |---|---|---|---|
