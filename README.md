@@ -578,14 +578,19 @@ The framework is benchmarked across the complete GIC 2026 challenge molecule sui
 
 ## Quick start (qBraid)
 
-### 1. Clone and fetch LFS artifacts
+### 1. Clone and one-shot setup
 
 ```bash
 git clone https://github.com/Quantum-Buddies/Conditional_GQE.git
 cd Conditional_GQE
-git lfs install
-git lfs pull
+bash scripts/setup_env.sh
 ```
+
+`setup_env.sh` handles everything — no sudo or system conda needed:
+- Downloads and installs git-lfs binary to `$HOME/.local/bin` (prebuilt, no root)
+- Pulls all LFS-tracked assets (checkpoints, energy cache, pretrain data)
+- Installs Python dependencies via `python3 -m pip` (qBraid-safe)
+- Verifies GPU, CUDA-Q, and audits critical files
 
 **LFS artifacts on `main`:**
 
@@ -593,9 +598,16 @@ git lfs pull
 |---|---|
 | `results/train/h_cgqe_model_b200_sft.pt` | SFT warm-start checkpoint |
 | `results/train/gqe_supervised_dataset.pt` | Supervised training dataset |
-| `results/train/rl_energy_cache.sqlite` | 24k circuit→energy cache (4–28q) |
+| `results/train/rl_energy_cache.sqlite` | 25K circuit→energy cache (4–28q) |
+| `results/train/rl_pretrain_from_cache.json` | 24K pretrain bootstrap circuits |
 
 ### 2. Environment
+
+On qBraid Lab, use the **Launch on qBraid** button or:
+
+[![Launch on qBraid](https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid.svg)](https://account.qbraid.com?link=https://github.com/Quantum-Buddies/Conditional_GQE)
+
+For local or HPC setups:
 
 ```bash
 conda env create -f environment-dgx-spark-cudaq.yml
@@ -603,45 +615,59 @@ conda activate conditional-gqe-cudaq
 pip install -r requirements-qbraid.txt
 ```
 
-On qBraid Lab, use the **Launch on qBraid** button or:
-
-[![Launch on qBraid](https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid.svg)](https://account.qbraid.com?link=https://github.com/Quantum-Buddies/Conditional_GQE)
-
 ### 3. Smoke test
 
 ```bash
-bash scripts/phase3/00_smoke_test.sh
+bash scripts/train_rl.sh smoke
 ```
 
-### 4. Recommended workflow (qBraid GPU + QPU)
+### 4. Training
 
 ```bash
-# RL training (uses energy cache — fast path)
-bash scripts/launch_b200_training.sh ablation
+bash scripts/train_rl.sh full          # cache-warmup → online-rl (~3h on H200)
+bash scripts/train_rl.sh cache-warmup  # 30 epochs, cache-only, no CUDA-Q (~45 min)
+bash scripts/train_rl.sh online-rl     # 50 epochs, write-through cache (~1.5-2h)
+```
 
-# Evaluate generated circuits
-python src/gqe/eval/evaluate_h_cgqe.py \
-  --checkpoint results/train/h_cgqe_model_b200_rl_scratch.pt \
-  --hamiltonians results/data/hamiltonians_gic2026/hamiltonians.json
+### 5. Evaluation
 
-# QPU preflight (simulator first — cheap)
+```bash
+bash scripts/evaluate_rl.sh all        # infer → eval → optimize → report
+bash scripts/evaluate_rl.sh infer      # generate circuits from checkpoint
+bash scripts/evaluate_rl.sh eval       # CUDA-Q energy evaluation
+bash scripts/evaluate_rl.sh optimize   # L-BFGS-B coefficient optimization
+```
+
+### 6. QPU validation
+
+```bash
 python scripts/qpu_preflight.py --dry-run --device qbraid:qbraid:sim:qir-sv
-
-# Submit shallow circuits to real QPU (≤12q)
 bash scripts/run_hpc_qbraid_workflow.sh --qpu-submit
 bash scripts/run_hpc_qbraid_workflow.sh --qpu-retrieve
-
-# FMO2 parent reconstruction (materials scaling story)
-bash scripts/phase3/04_run_fmo.sh
-
-# QSCI / MPS scaling (28–40q write-up numbers)
-bash scripts/phase3/05_run_mps.sh
-bash scripts/phase3/09_run_qsci.sh
 ```
 
 ---
 
 ## Training launcher
+
+### Portable qBraid scripts (zero hardcoded paths)
+
+| Script | Purpose |
+|---|---|
+| [`scripts/setup_env.sh`](scripts/setup_env.sh) | One-shot setup: git-lfs, pip deps, GPU verify (no sudo) |
+| [`scripts/env_gpu.sh`](scripts/env_gpu.sh) | Auto-detect GPU, set CUDA-Q gate fusion / mempool env vars |
+| [`scripts/train_rl.sh`](scripts/train_rl.sh) | Two-phase RL training (smoke / cache-warmup / online-rl / full) |
+| [`scripts/evaluate_rl.sh`](scripts/evaluate_rl.sh) | Evaluation pipeline (infer / eval / optimize / report / all) |
+
+```bash
+bash scripts/train_rl.sh smoke          # 2 epochs, 2 molecules (~2 min)
+bash scripts/train_rl.sh full           # cache-warmup → online-rl (~3h on H200)
+bash scripts/evaluate_rl.sh all         # infer → eval → optimize → report
+```
+
+GPU auto-detection: `env_gpu.sh` reads compute capability and sets CUDA-Q gate fusion level (Hopper CC 9.0 → fusion 5, Blackwell CC 10.0 → +FP32 emulation, Ampere CC 8.0 → fusion 4). Molecule lists are auto-generated from the Hamiltonians JSON filtered by GPU-specific qubit limits.
+
+### B200 / Blackwell launcher (legacy)
 
 Portable entry point: [`scripts/launch_b200_training.sh`](scripts/launch_b200_training.sh)
 
