@@ -4,6 +4,10 @@
 # =============================================================================
 # Run this immediately after `git clone` on a new qBraid instance.
 #
+# No sudo required. No system conda required.
+# git-lfs is installed as a prebuilt binary in $HOME/.local/bin.
+# Python deps are installed via `python3 -m pip` (qBraid-safe).
+#
 # Usage:
 #   bash scripts/setup_env.sh
 # =============================================================================
@@ -22,42 +26,98 @@ echo "============================================================"
 echo ""
 
 # ------------------------------------------------------------------
-# 1. Git LFS — install if missing, then pull all LFS-tracked assets
+# 1. Git LFS — install prebuilt binary to $HOME/.local/bin (no sudo)
 # ------------------------------------------------------------------
 echo ">>> [1/5] Git LFS..."
-if ! command -v git-lfs &>/dev/null; then
-    echo "    git-lfs not found — attempting install..."
-    if command -v apt-get &>/dev/null; then
-        apt-get update -qq && apt-get install -y -qq git-lfs 2>/dev/null || true
-    elif command -v conda &>/dev/null; then
-        conda install -y -c conda-forge git-lfs 2>/dev/null || true
-    fi
-fi
+
+# Ensure $HOME/.local/bin exists and is on PATH
+mkdir -p "$HOME/.local/bin"
+export PATH="$HOME/.local/bin:$PATH"
 
 if command -v git-lfs &>/dev/null; then
-    echo "    Pulling LFS assets..."
+    echo "    git-lfs already available: $(git-lfs --version)"
+else
+    echo "    git-lfs not found — downloading prebuilt binary (no sudo needed)..."
+
+    # Detect architecture
+    ARCH="$(uname -m)"
+    case "$ARCH" in
+        x86_64)  LFS_ARCH="linux-amd64" ;;
+        aarch64) LFS_ARCH="linux-arm64" ;;
+        *)       LFS_ARCH="linux-amd64" ;;  # fallback
+    esac
+
+    # Fetch latest release tag from GitHub API
+    LFS_VERSION="$(python3 -c "
+import urllib.request, json
+url = 'https://api.github.com/repos/git-lfs/git-lfs/releases/latest'
+req = urllib.request.Request(url, headers={'User-Agent': 'setup-script'})
+data = json.loads(urllib.request.urlopen(req, timeout=15).read())
+print(data['tag_name'].lstrip('v'))
+" 2>/dev/null || echo '3.5.1')"
+
+    LFS_TARBALL="git-lfs-${LFS_ARCH}-v${LFS_VERSION}.tar.gz"
+    LFS_URL="https://github.com/git-lfs/git-lfs/releases/download/v${LFS_VERSION}/${LFS_TARBALL}"
+    LFS_TMPDIR="$(mktemp -d)"
+
+    echo "    Downloading: ${LFS_URL}"
+    if python3 -c "
+import urllib.request, sys, os
+out = os.path.join('${LFS_TMPDIR}', '${LFS_TARBALL}')
+urllib.request.urlretrieve('${LFS_URL}', out)
+print(f'    Downloaded to {out} ({os.path.getsize(out) // 1024} KB)')
+" 2>/dev/null; then
+        cd "$LFS_TMPDIR"
+        tar xzf "$LFS_TARBALL" 2>/dev/null
+        # The tarball contains git-lfs binary directly
+        if [ -f "git-lfs" ]; then
+            cp git-lfs "$HOME/.local/bin/git-lfs"
+            chmod +x "$HOME/.local/bin/git-lfs"
+            echo "    Installed: $(git-lfs --version)"
+        else
+            # Some releases use install.sh
+            if [ -f "install.sh" ]; then
+                sed -i "s|^prefix=.*|prefix=\"$HOME/.local\"|" install.sh 2>/dev/null || true
+                bash install.sh 2>/dev/null || true
+                echo "    Installed via install.sh: $(git-lfs --version 2>/dev/null || echo 'check manually')"
+            fi
+        fi
+        cd "$ROOT"
+    else
+        echo "    WARNING: Could not download git-lfs binary."
+        echo "             Manual install: wget $LFS_URL && tar xzf && cp git-lfs ~/.local/bin/"
+    fi
+    rm -rf "$LFS_TMPDIR"
+fi
+
+# Pull LFS assets
+if command -v git-lfs &>/dev/null; then
+    echo "    Pulling LFS-tracked assets..."
     cd "$ROOT"
     git lfs install --skip-repo 2>/dev/null || true
     git lfs pull 2>/dev/null || echo "    WARNING: git lfs pull failed — check network or LFS quota."
 else
-    echo "    WARNING: git-lfs could not be installed automatically."
-    echo "             Manually install it and run 'git lfs pull' to fetch"
-    echo "             checkpoints, energy cache, and pretrain data."
+    echo "    WARNING: git-lfs unavailable. LFS-tracked files (.pt, .sqlite) will be"
+    echo "             pointer stubs. Install git-lfs manually and run 'git lfs pull'."
 fi
 
 # ------------------------------------------------------------------
-# 2. Python Dependencies
+# 2. Python Dependencies (qBraid-safe: use python3 -m pip)
 # ------------------------------------------------------------------
 echo ""
 echo ">>> [2/5] Python Dependencies..."
 cd "$ROOT"
 
+# On qBraid, bare `pip` defaults to /opt/conda/bin/pip (non-persistent).
+# Using `python3 -m pip` ensures we install into the active environment.
+PIP_CMD="python3 -m pip"
+
 if [ -f "requirements-qbraid.txt" ]; then
-    pip install --quiet -r requirements-qbraid.txt
+    $PIP_CMD install --quiet -r requirements-qbraid.txt
 elif [ -f "requirements.txt" ]; then
-    pip install --quiet -r requirements.txt
+    $PIP_CMD install --quiet -r requirements.txt
 else
-    pip install --quiet pyyaml numpy scipy matplotlib tqdm \
+    $PIP_CMD install --quiet pyyaml numpy scipy matplotlib tqdm \
         openfermion openfermionpyscf pyscf \
         qiskit qiskit-algorithms qiskit-nature \
         cudaq cudaq-solvers fpdf2
