@@ -1717,13 +1717,15 @@ def main() -> None:
     if use_torch_compile:
         compile_mode = args.compile_mode
         try:
-            import torch._dynamo
+            # IMPORTANT: do NOT `import torch._dynamo` here — that rebinds the
+            # local name `torch` and causes UnboundLocalError on earlier uses.
+            import torch._dynamo as _dynamo
             # Allow more specialized graphs across mol/batch shapes before eager.
-            torch._dynamo.config.cache_size_limit = max(
-                32, int(getattr(torch._dynamo.config, "cache_size_limit", 8))
+            _dynamo.config.cache_size_limit = max(
+                32, int(getattr(_dynamo.config, "cache_size_limit", 8))
             )
-            torch._dynamo.config.accumulated_cache_size_limit = max(
-                256, int(getattr(torch._dynamo.config, "accumulated_cache_size_limit", 64))
+            _dynamo.config.accumulated_cache_size_limit = max(
+                256, int(getattr(_dynamo.config, "accumulated_cache_size_limit", 64))
             )
             enc = model.module.encoder if is_dp else model.encoder
             dec = model.module.decoder if is_dp else model.decoder

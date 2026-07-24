@@ -248,8 +248,12 @@ run_online_rl() {
     echo "============================================================"
 
     # Prefer SFT directly — cache-only warmup is not required for learning.
+    # FORCE_SFT=1 (set by `full`) skips any stale warmup checkpoint.
     local CKPT
-    if [ -f "$OUTPUT_CKPT_WARMUP" ]; then
+    if [ "${FORCE_SFT:-0}" = "1" ]; then
+        CKPT="$SFT_CKPT"
+        echo "  Loading SFT checkpoint (forced): $CKPT"
+    elif [ -f "$OUTPUT_CKPT_WARMUP" ]; then
         CKPT="$OUTPUT_CKPT_WARMUP"
         echo "  Loading warmup checkpoint: $CKPT"
     else
@@ -296,13 +300,12 @@ run_full() {
     echo "============================================================"
     echo ""
 
-    # Ensure online-rl loads SFT (not a half-trained cache-only warmup).
+    # Always start from SFT for `full` — ignore any stale cache-only warmup ckpt.
     if [ -f "$OUTPUT_CKPT_WARMUP" ]; then
-        echo "  Note: found $OUTPUT_CKPT_WARMUP — online-rl will prefer it."
-        echo "  Remove it if you want a clean SFT start."
+        echo "  Ignoring warmup checkpoint (use online-rl if you want it):"
+        echo "    $OUTPUT_CKPT_WARMUP"
     fi
-
-    run_online_rl
+    FORCE_SFT=1 run_online_rl
 
     local TOTAL=$(( ($(date +%s) - TOTAL_START) / 60 ))
     local RATE; RATE=$(get_credit_rate)
