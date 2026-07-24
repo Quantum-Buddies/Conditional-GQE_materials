@@ -284,6 +284,7 @@ def resolve_energies_with_cache(
     eval_fn,
     cache: PersistentEnergyCache | None = None,
     cache_only: bool = False,
+    miss_penalty: float = 0.0,
 ) -> tuple[list[float], dict[str, int]]:
     """Resolve energies via persistent cache with optional CUDA-Q fallback.
 
@@ -291,8 +292,11 @@ def resolve_energies_with_cache(
         operators_batch: circuits to evaluate
         eval_fn: callable(list[list[str]]) -> list[float] for cache misses
         cache: PersistentEnergyCache or None (always call eval_fn)
-        cache_only: if True, misses get energy 0.0 and are counted as skipped
-                    (caller may filter); eval_fn is not called
+        cache_only: if True, misses get miss_penalty energy and are counted
+                    as skipped; eval_fn is not called
+        miss_penalty: energy assigned to cache misses in cache_only mode.
+                      Use HF energy so uncached circuits get a realistic
+                      bad reward (not 0.0 which would be better than real energies).
 
     Returns:
         (energies, stats) with hits/misses/skipped
@@ -315,7 +319,7 @@ def resolve_energies_with_cache(
         return [float(e) for e in partial], {"hits": hits, "misses": 0, "skipped": 0}
 
     if cache_only:
-        energies = [float(e) if e is not None else 0.0 for e in partial]
+        energies = [float(e) if e is not None else miss_penalty for e in partial]
         skipped = len(miss_idx)
         return energies, {"hits": hits, "misses": len(miss_idx), "skipped": skipped}
 

@@ -32,8 +32,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
 import numpy as np
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
 
@@ -168,6 +170,7 @@ class DedupCache:
         n_electrons: int = 0,
         optimizer_iters: int = 5,
         initial_theta: float = 0.01,
+        sqlite_path: str | None = None,
     ) -> None:
         self.molecule_id = molecule_id
         self.n_qubits = n_qubits
@@ -175,12 +178,77 @@ class DedupCache:
         self.optimizer_iters = optimizer_iters
         self.initial_theta = initial_theta
         self._cache: dict[str, tuple[float, int]] = {}
+        self._sqlite_path: str | None = None
+        self._sqlite_conn: sqlite3.Connection | None = None
+        if sqlite_path:
+            self._init_sqlite(sqlite_path)
 
     def _key(self, operators: list[str]) -> str:
         return _circuit_cache_key(
             operators, self.molecule_id, self.n_qubits,
             self.n_electrons, self.optimizer_iters, self.initial_theta,
         )
+
+    def _init_sqlite(self, path: str) -> None:
+        """Initialize SQLite backing store for persistent cache."""
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        self._sqlite_path = path
+        self._sqlite_conn = sqlite3.connect(path, check_same_thread=False)
+        self._sqlite_conn.execute(
+            "CREATE TABLE IF NOT EXISTS energy_cache ("
+            "  cache_key TEXT PRIMARY KEY,"
+            "  molecule_id TEXT NOT NULL,"
+            "  n_qubits INTEGER NOT NULL,"
+            "  n_electrons INTEGER NOT NULL,"
+            "  optimizer_iters INTEGER NOT NULL,"
+            "  initial_theta REAL NOT NULL,"
+            "  operators_json TEXT NOT NULL,"
+            "  energy REAL NOT NULL,"
+            "  eval_count INTEGER DEFAULT 1"
+            ")"
+        )
+        self._sqlite_conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_molecule "
+            "ON energy_cache(molecule_id)"
+        )
+        self._sqlite_conn.commit()
+
+    def _sqlite_lookup(self, key: str) -> tuple[float, int] | None:
+        """Look up a cache entry in SQLite."""
+        if self._sqlite_conn is None:
+            return None
+        row = self._sqlite_conn.execute(
+            "SELECT energy, eval_count FROM energy_cache WHERE cache_key = ?",
+            (key,),
+        ).fetchone()
+        if row is not None:
+            return float(row[0]), int(row[1])
+        return None
+
+    def _sqlite_insert(self, key: str, operators: list[str], energy: float) -> None:
+        """Insert a new cache entry into SQLite."""
+        if self._sqlite_conn is None:
+            return
+        self._sqlite_conn.execute(
+            "INSERT OR REPLACE INTO energy_cache "
+            "(cache_key, molecule_id, n_qubits, n_electrons, optimizer_iters, "
+            " initial_theta, operators_json, energy, eval_count) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)",
+            (key, self.molecule_id, self.n_qubits, self.n_electrons,
+             self.optimizer_iters, self.initial_theta,
+             json.dumps(operators), energy),
+        )
+        self._sqlite_conn.commit()
+
+    def _sqlite_increment(self, key: str) -> None:
+        """Increment eval_count for an existing entry."""
+        if self._sqlite_conn is None:
+            return
+        self._sqlite_conn.execute(
+            "UPDATE energy_cache SET eval_count = eval_count + 1 WHERE cache_key = ?",
+            (key,),
+        )
+        self._sqlite_conn.commit()
 
     def get(self, operators: list[str]) -> float | None:
         """Return cached energy for this circuit+context, or None if not seen."""
@@ -189,13 +257,23 @@ class DedupCache:
         if entry is not None:
             energy, count = entry
             self._cache[h] = (energy, count + 1)
+            self._sqlite_increment(h)
             return energy
+        # Check SQLite backing store
+        if self._sqlite_conn is not None:
+            sql_entry = self._sqlite_lookup(h)
+            if sql_entry is not None:
+                energy, count = sql_entry
+                self._cache[h] = (energy, count + 1)
+                self._sqlite_increment(h)
+                return energy
         return None
 
     def put(self, operators: list[str], energy: float) -> None:
         """Cache the energy for this circuit+context."""
         h = self._key(operators)
         self._cache[h] = (energy, 1)
+        self._sqlite_insert(h, operators, energy)
 
     def get_or_compute(
         self,
@@ -232,6 +310,50 @@ class DedupCache:
 
     def __len__(self) -> int:
         return len(self._cache)
+
+    def close(self) -> None:
+        """Close SQLite connection if open."""
+        if self._sqlite_conn is not None:
+            self._sqlite_conn.close()
+            self._sqlite_conn = None
+
+    @classmethod
+    def from_sqlite(
+        cls,
+        sqlite_path: str,
+        molecule_id: str = "",
+        n_qubits: int = 0,
+        n_electrons: int = 0,
+        optimizer_iters: int = 5,
+        initial_theta: float = 0.01,
+    ) -> "DedupCache":
+        """Create a DedupCache backed by an existing SQLite file.
+
+        Entries for the given molecule context are pre-loaded into memory
+        for fast access. All entries for other molecules remain in SQLite
+        and are loaded on demand by their respective DedupCache instances.
+        """
+        cache = cls(
+            molecule_id=molecule_id,
+            n_qubits=n_qubits,
+            n_electrons=n_electrons,
+            optimizer_iters=optimizer_iters,
+            initial_theta=initial_theta,
+            sqlite_path=sqlite_path,
+        )
+        # Pre-load entries for this molecule into memory
+        if cache._sqlite_conn is not None:
+            rows = cache._sqlite_conn.execute(
+                "SELECT cache_key, energy, eval_count FROM energy_cache "
+                "WHERE molecule_id = ? AND n_qubits = ? AND n_electrons = ? "
+                "AND optimizer_iters = ? AND ABS(initial_theta - ?) < 1e-10",
+                (molecule_id, n_qubits, n_electrons, optimizer_iters, initial_theta),
+            ).fetchall()
+            for key, energy, count in rows:
+                cache._cache[key] = (float(energy), int(count))
+            if rows:
+                print(f"  DedupCache loaded {len(rows)} entries from SQLite for {molecule_id}")
+        return cache
 
 
 class MAPElitesArchive:

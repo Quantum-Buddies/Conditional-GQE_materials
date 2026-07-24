@@ -695,6 +695,8 @@ def evaluate_energies_qd(
     dedup_cache: DedupCache,
     initial_theta: float = 0.01,
     max_iters: int = 5,
+    cache_only: bool = False,
+    hf_energy: float | None = None,
 ) -> tuple[list[float], dict[str, int]]:
     """Evaluate energies using truncated L-BFGS-B with global dedup cache.
 
@@ -709,10 +711,31 @@ def evaluate_energies_qd(
         dedup_cache: global DedupCache for circuit→energy mapping
         initial_theta: starting angle for L-BFGS-B
         max_iters: max L-BFGS-B iterations (5 = fast surrogate)
+        cache_only: if True, skip CUDA-Q on cache miss and return HF penalty
+        hf_energy: Hartree-Fock energy for cache-only penalty (fallback: 0.0)
 
     Returns:
         (energies, stats) where stats has cache hit/miss counts
     """
+    penalty_energy = hf_energy if hf_energy is not None else 0.0
+
+    if cache_only:
+        energies = []
+        n_hits = 0
+        n_misses = 0
+        for operators in operators_batch:
+            if not operators:
+                energies.append(0.0)
+                continue
+            cached = dedup_cache.get(operators)
+            if cached is not None:
+                energies.append(cached)
+                n_hits += 1
+            else:
+                energies.append(penalty_energy)
+                n_misses += 1
+        return energies, {"hits": n_hits, "misses": n_misses}
+
     if cudaq is None:
         return [0.0] * len(operators_batch), {"hits": 0, "misses": 0}
 
@@ -1793,12 +1816,19 @@ def main() -> None:
             max_seq_len=args.max_seq_len,
         )
         dedup_cache = {}  # molecule_name → DedupCache (created per-molecule)
+        cache_mode = "online"  # online = CUDA-Q, offline = SQLite only
+        if args.energy_cache is not None:
+            cache_mode = "cache-only" if args.cache_only else "hybrid"
         print(f"\n=== QD-GRPO MODE ENABLED (MAP-Elites × GRPO) ===")
         print(f"  Archives: per-molecule {args.qd_n_bins_entanglement}×{args.qd_n_bins_depth} grids")
         print(f"  Novelty weight: {args.qd_novelty_weight} → {args.qd_lambda_final} "
               f"(coverage threshold: {args.qd_coverage_threshold})")
         print(f"  Surrogate: truncated L-BFGS-B ({args.qd_lbfgs_iters} iters) + per-molecule dedup cache")
         print(f"  Features: entanglement_density (multi-qubit X/Y) × circuit_depth")
+        if cache_mode != "online":
+            print(f"  Energy cache: {args.energy_cache} (mode={cache_mode})")
+            if cache_mode == "cache-only":
+                print(f"  ⚠ Cache-only mode: CUDA-Q NOT required. Uncached circuits → HF penalty energy.")
 
     # Load pre-constructed sequences from GQE baseline (GPT-QE paper Section 2.2)
     pretrain_data: dict[str, list[dict[str, Any]]] = {}
@@ -1824,7 +1854,7 @@ def main() -> None:
                     mol_name, s = all_pre_samples[idx]
                     replay_buffer.push(
                         s["sequence"], s["energy"],
-                        torch.zeros(args.max_seq_len),  # dummy log_probs
+                        torch.zeros(args.max_seq_len - 1),  # dummy log_probs (seq_len - 1)
                         mol_name, s["operators"],
                     )
                 print(f"  Pre-filled replay buffer with {len(replay_buffer)} pre-constructed samples")
@@ -1940,23 +1970,64 @@ def main() -> None:
 
                 # QD-GRPO: use truncated L-BFGS-B with per-molecule dedup cache
                 if args.qd_mode and dedup_cache is not None:
-                    # Get or create per-molecule dedup cache with molecule context
-                    if mol_name not in dedup_cache:
-                        mol_nq = int(mol_data["record"]["n_qubits"])
-                        mol_ne = get_active_electron_count(mol_data["record"])
-                        dedup_cache[mol_name] = DedupCache(
+                    mol_nq = int(mol_data["record"]["n_qubits"])
+                    mol_ne = get_active_electron_count(mol_data["record"])
+                    if args.energy_cache is not None and energy_cache is not None:
+                        # Use PersistentEnergyCache (matches B200 precompute schema)
+                        # via resolve_energies_with_cache for both cache-only and
+                        # hybrid modes. This is compatible with the precomputed
+                        # SQLite file from launch_b200_training.sh cache mode.
+                        hf_penalty = mol_data.get("hf_energy") or 0.0
+
+                        def _qd_eval_fn(ops_batch, _mr=mol_data["record"], _it=args.theta,
+                                        _mi=args.qd_lbfgs_iters):
+                            return evaluate_energies_qd(
+                                ops_batch, _mr,
+                                dedup_cache=DedupCache(
+                                    molecule_id=mol_name,
+                                    n_qubits=mol_nq,
+                                    n_electrons=mol_ne,
+                                    optimizer_iters=_mi,
+                                    initial_theta=_it,
+                                ),
+                                initial_theta=_it,
+                                max_iters=_mi,
+                                cache_only=False,
+                                hf_energy=hf_penalty,
+                            )[0]
+
+                        energies, cache_stats = resolve_energies_with_cache(
+                            operator_lists,
                             molecule_id=mol_name,
                             n_qubits=mol_nq,
                             n_electrons=mol_ne,
-                            optimizer_iters=args.qd_lbfgs_iters,
-                            initial_theta=args.theta,
+                            theta=args.theta,
+                            eval_fn=_qd_eval_fn,
+                            cache=energy_cache,
+                            cache_only=args.cache_only,
+                            miss_penalty=hf_penalty,
                         )
-                    energies, cache_stats = evaluate_energies_qd(
-                        operator_lists, mol_data["record"],
-                        dedup_cache=dedup_cache[mol_name],
-                        initial_theta=args.theta,
-                        max_iters=args.qd_lbfgs_iters,
-                    )
+                        epoch_cache_hits += cache_stats["hits"]
+                        epoch_cache_misses += cache_stats["misses"]
+                        epoch_cache_skipped += cache_stats.get("skipped", 0)
+                    else:
+                        # No persistent cache — use in-memory DedupCache only
+                        if mol_name not in dedup_cache:
+                            dedup_cache[mol_name] = DedupCache(
+                                molecule_id=mol_name,
+                                n_qubits=mol_nq,
+                                n_electrons=mol_ne,
+                                optimizer_iters=args.qd_lbfgs_iters,
+                                initial_theta=args.theta,
+                            )
+                        energies, cache_stats = evaluate_energies_qd(
+                            operator_lists, mol_data["record"],
+                            dedup_cache=dedup_cache[mol_name],
+                            initial_theta=args.theta,
+                            max_iters=args.qd_lbfgs_iters,
+                            cache_only=args.cache_only,
+                            hf_energy=mol_data.get("hf_energy"),
+                        )
                 else:
                     # Auto-switch to MPS for large qubit counts (B200: SV ~<=28–32q,
                     # MPS for larger). Key off qubit count only — do not require mqpu.
@@ -2042,6 +2113,7 @@ def main() -> None:
                             )
 
                     mol_ne = get_active_electron_count(mol_data["record"])
+                    _hf_pen = mol_data.get("hf_energy") or 0.0
                     energies, ec_stats = resolve_energies_with_cache(
                         operator_lists,
                         molecule_id=mol_name,
@@ -2051,6 +2123,7 @@ def main() -> None:
                         eval_fn=_eval_fn,
                         cache=energy_cache,
                         cache_only=args.cache_only,
+                        miss_penalty=_hf_pen,
                     )
                     epoch_cache_hits += ec_stats["hits"]
                     epoch_cache_misses += ec_stats["misses"]
@@ -2504,7 +2577,7 @@ def main() -> None:
                             mol_name, s = all_pre[idx]
                             replay_buffer.push(
                                 s["sequence"], s["energy"],
-                                torch.zeros(args.max_seq_len),
+                                torch.zeros(args.max_seq_len - 1),
                                 mol_name, s["operators"],
                             )
 
@@ -2644,6 +2717,7 @@ def main() -> None:
         if dedup_cache is not None:
             for mol_name, cache in dedup_cache.items():
                 print(f"  Dedup cache ({mol_name}): {cache.stats()}")
+                cache.close()
 
     # Save metrics JSON
     metrics_path = args.out.parent / f"{args.out.stem}_rl_metrics.json"
@@ -2654,7 +2728,7 @@ def main() -> None:
             "train_log": train_metrics_log,
             "final_buffer_size": len(replay_buffer),
             "qd_summary": map_elites.summary() if args.qd_mode and map_elites is not None else None,
-            "dedup_stats": dedup_cache.stats() if args.qd_mode and dedup_cache is not None else None,
+            "dedup_stats": {name: c.stats() for name, c in dedup_cache.items()} if args.qd_mode and dedup_cache is not None else None,
         }, f, indent=2)
     print(f"\nMetrics saved to: {metrics_path}")
     print(f"Model saved to: {args.out}")

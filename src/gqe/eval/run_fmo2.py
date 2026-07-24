@@ -3,11 +3,22 @@
 Computes FMO2 many-body expansion:
   E_FMO2 = sum_I E_I + sum_{I<J} (E_IJ - E_I - E_J)
 
-For the IMePh parent system with 2 fragments (I-C bond region + phenyl ring),
-this requires: 2 monomer energies + 1 dimer energy = 3 calculations.
+Supports arbitrary numbers of fragments with explicit dimer Hamiltonians.
+Integrates with MAP-Elites archive for circuit library selection via
+select_elite_for_fragment().
 
-Each fragment uses the same active space (4 electrons, 4 orbitals, 8 qubits)
-as the parent IMePh molecule.
+Usage:
+    # Exact diagonalization (classical baseline)
+    python -m src.gqe.eval.run_fmo2 --fragments fragments.json --method exact --out results/fmo2_exact.json
+
+    # H-cGQE inference (quantum)
+    python -m src.gqe.eval.run_fmo2 --fragments fragments.json --method hcgqe \
+        --checkpoint results/checkpoints/hcgqe_rl_dapo_best.pt --out results/fmo2_gqe.json
+
+    # With MAP-Elites archive circuit library
+    python -m src.gqe.eval.run_fmo2 --fragments fragments.json --method hcgqe \
+        --checkpoint results/checkpoints/hcgqe_rl_dapo_best.pt \
+        --archive-dir results/train/map_elites/ --out results/fmo2_gqe.json
 """
 from __future__ import annotations
 
@@ -45,12 +56,22 @@ def hcgqe_fragment_energy(
     n_samples: int = 100,
     target: str = "nvidia",
     target_option: str | None = "mqpu",
+    archive_ops: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Run H-cGQE inference + L-BFGS-B optimization for a single fragment."""
+    """Run H-cGQE inference + L-BFGS-B optimization for a single fragment.
+
+    Args:
+        record: fragment Hamiltonian record
+        checkpoint: path to H-cGQE model checkpoint
+        n_samples: number of circuits to sample
+        target: CUDA-Q target backend
+        target_option: CUDA-Q target option (mqpu, etc.)
+        archive_ops: optional pre-selected operators from MAP-Elites archive.
+            If provided, these are evaluated directly instead of sampling.
+    """
     import torch
     from src.gqe.models.h_cgqe_transformer import HcGQEModel, tokenize_hamiltonian, build_operator_vocab
 
-    # Load checkpoint
     ckpt = torch.load(checkpoint, map_location="cuda" if torch.cuda.is_available() else "cpu", weights_only=False)
     config = ckpt.get("config", {})
     model = HcGQEModel(
@@ -67,11 +88,9 @@ def hcgqe_fragment_energy(
     model = model.to(device)
     model.eval()
 
-    # Load vocab from checkpoint (same as infer_h_cgqe.py)
     n_qubits = record.get("n_qubits", 8)
     vocab = ckpt.get("vocab")
     if vocab is None:
-        # Fallback: build from UCCSD pool and pad
         from src.gqe.common.operator_pool import build_uccsd_pauli_words
         pauli_words = build_uccsd_pauli_words(record)
         vocab = build_operator_vocab(pauli_words)
@@ -79,7 +98,6 @@ def hcgqe_fragment_energy(
         for i in range(len(vocab), model_vocab_size):
             vocab[f"<DUMMY_{i}>"] = i
 
-    # Tokenize Hamiltonian — convert dict terms to (label, coeff) tuples
     raw_terms = record.get("terms", record.get("pauli_terms", []))
     if not raw_terms:
         raise ValueError(f"No terms in record {record.get('name')}")
@@ -99,9 +117,13 @@ def hcgqe_fragment_energy(
     coeffs = inputs["coeffs"].unsqueeze(0).to(device)
     term_mask = inputs["term_mask"].unsqueeze(0).to(device)
 
-    # Generate circuits
     best_energy = float("inf")
     best_ops = None
+
+    candidate_ops_list: list[list[str]] = []
+    if archive_ops:
+        candidate_ops_list.append(archive_ops)
+
     for _ in range(n_samples):
         tokens = model.generate(
             pauli_ids, coeffs, term_mask,
@@ -120,19 +142,21 @@ def hcgqe_fragment_energy(
                     if idx == t:
                         ops.append(word)
                         break
-        if not ops:
-            continue
+        if ops:
+            candidate_ops_list.append(ops)
 
-        # Quick energy eval with fixed theta
-        if cudaq is not None:
+    if cudaq is not None:
+        from src.gqe.eval.evaluate_h_cgqe import _compute_circuit_energy
+        for ops in candidate_ops_list:
+            if not ops:
+                continue
             try:
-                from src.gqe.eval.evaluate_h_cgqe import _compute_circuit_energy
                 E = _compute_circuit_energy(record, ops, device=target)
                 if E < best_energy:
                     best_energy = E
                     best_ops = ops
             except Exception as e:
-                print(f"    Warning: energy eval failed for ops={ops}: {e}")
+                print(f"    Warning: energy eval failed for ops={ops[:3]}...: {e}")
                 continue
 
     return {
@@ -140,7 +164,41 @@ def hcgqe_fragment_energy(
         "best_energy": best_energy,
         "best_operators": best_ops or [],
         "n_samples": n_samples,
+        "n_candidates": len(candidate_ops_list),
+        "used_archive_ops": archive_ops is not None,
     }
+
+
+def load_archive_circuit(
+    archive_dir: str,
+    molecule_name: str,
+    target_n_qubits: int,
+) -> list[str] | None:
+    """Load the best elite circuit from a MAP-Elites archive for a fragment."""
+    from src.gqe.rl.map_elites import MAPElitesArchive
+
+    archive_path = Path(archive_dir) / f"map_elites_{molecule_name}.json"
+    if not archive_path.exists():
+        archive_path = Path(archive_dir) / "map_elites.json"
+    if not archive_path.exists():
+        return None
+
+    archive = MAPElitesArchive()
+    archive.load(str(archive_path))
+    if len(archive) == 0:
+        return None
+
+    elite = archive.select_elite_for_fragment(
+        target_n_qubits=target_n_qubits,
+        max_operators=32,
+    )
+    if elite is None:
+        return None
+
+    ops = elite.get("operators", [])
+    e_val = elite.get("energy", 0.0)
+    print(f"    Archive: selected elite with E={e_val:.6f}, ops={len(ops)}")
+    return ops
 
 
 def run_fmo2(
@@ -150,10 +208,25 @@ def run_fmo2(
     target: str = "nvidia",
     target_option: str | None = "mqpu",
     n_samples: int = 100,
+    archive_dir: str | None = None,
+    dimers_file: str | None = None,
+    parent_hamiltonians_file: str | None = None,
 ) -> dict[str, Any]:
-    """Run FMO2 reconstruction."""
+    """Run FMO2 reconstruction.
 
-    # Load fragment Hamiltonians
+    Args:
+        fragments_file: JSON file with fragment Hamiltonian records
+        method: "exact" (classical diagonalization) or "hcgqe" (quantum GQE)
+        checkpoint: path to H-cGQE checkpoint (required for method="hcgqe")
+        target: CUDA-Q target backend
+        target_option: CUDA-Q target option
+        n_samples: number of circuits to sample per fragment
+        archive_dir: directory containing MAP-Elites archive JSON files
+        dimers_file: JSON file with dimer Hamiltonian records (optional)
+        parent_hamiltonians_file: JSON file with parent molecule Hamiltonians
+    """
+    t_start = time.time()
+
     with open(fragments_file) as f:
         frag_data = json.load(f)
 
@@ -161,71 +234,154 @@ def run_fmo2(
     n_frags = len(fragments)
 
     print(f"FMO2 reconstruction: {n_frags} fragments, method={method}")
+    if archive_dir:
+        print(f"  Archive circuit library: {archive_dir}")
 
-    # Monomer energies
+    dimer_records: dict[str, dict[str, Any]] = {}
+    if dimers_file:
+        with open(dimers_file) as f:
+            dimer_data = json.load(f)
+        dimer_list = dimer_data.get("dimers", dimer_data.get("records", []))
+        for d in dimer_list:
+            key = d.get("name", f"dim_{d.get('frag_i', 0)}_{d.get('frag_j', 0)}")
+            dimer_records[key] = d
+        print(f"  Loaded {len(dimer_records)} dimer Hamiltonians")
+
+    parent_records = None
+    if parent_hamiltonians_file:
+        parent_records = load_hamiltonian_records(Path(parent_hamiltonians_file))
+
+    # --- Monomer energies ---
+    monomer_results = []
     monomer_energies = []
     for i, frag in enumerate(fragments):
         name = frag.get("name", f"frag_{i}")
+        n_qubits = frag.get("n_qubits", 0)
+        print(f"\n  Monomer {i}: {name} ({n_qubits}q)")
+
+        archive_ops = None
+        if archive_dir and method == "hcgqe":
+            archive_ops = load_archive_circuit(archive_dir, name, n_qubits)
+
         if method == "exact":
             E = exact_energy_from_hamiltonian(frag)
+            result = {"fragment": name, "best_energy": E, "best_operators": [], "n_samples": 0}
         else:
-            r = hcgqe_fragment_energy(frag, checkpoint, n_samples, target, target_option)
-            E = r["best_energy"]
-        monomer_energies.append(E)
-        print(f"  Monomer {i}: {name} E = {E:.6f} Ha")
+            result = hcgqe_fragment_energy(
+                frag, checkpoint, n_samples, target, target_option,
+                archive_ops=archive_ops,
+            )
+            E = result["best_energy"]
 
-    # Dimer energies (all pairs)
+        monomer_results.append(result)
+        monomer_energies.append(E)
+        print(f"    E = {E:.6f} Ha")
+
+    # --- Dimer energies ---
+    dimer_results = {}
     dimer_energies = {}
     for i in range(n_frags):
         for j in range(i + 1, n_frags):
-            # For the dimer, we use the parent Hamiltonian if available
-            # Otherwise, combine fragment terms
-            # In practice, dimers would be pre-computed; here we use
-            # the parent molecule energy as a proxy for the full dimer
-            # if we only have 2 fragments
             pair_key = f"{i}_{j}"
-            if n_frags == 2:
-                # For 2-fragment FMO2, the dimer IS the parent molecule
-                # Load parent Hamiltonian
-                parent_path = "results/data/hamiltonians_phase3.json/hamiltonians.json"
-                records = load_hamiltonian_records(Path(parent_path))
-                parent = find_record_by_name(records, "imeph")
-                if parent:
-                    if method == "exact":
-                        E_ij = exact_energy_from_hamiltonian(parent)
-                    else:
-                        r = hcgqe_fragment_energy(parent, checkpoint, n_samples, target, target_option)
-                        E_ij = r["best_energy"]
-                else:
-                    E_ij = sum(monomer_energies)  # fallback
-            else:
-                # For >2 fragments, would need explicit dimer Hamiltonians
-                E_ij = sum(monomer_energies)  # placeholder
-            dimer_energies[pair_key] = E_ij
-            print(f"  Dimer {i}-{j}: E = {E_ij:.6f} Ha")
+            name_i = fragments[i].get("name", f"frag_{i}")
+            name_j = fragments[j].get("name", f"frag_{j}")
+            dimer_name = f"dim_{name_i}_{name_j}"
+            print(f"\n  Dimer {i}-{j}: {dimer_name}")
 
-    # FMO2 formula: E = sum_I E_I + sum_{I<J} (E_IJ - E_I - E_J)
+            dimer_record = None
+            if dimer_name in dimer_records:
+                dimer_record = dimer_records[dimer_name]
+            elif pair_key in dimer_records:
+                dimer_record = dimer_records[pair_key]
+            elif n_frags == 2 and parent_records is not None:
+                parent_name = frag_data.get("parent_name", "imeph")
+                try:
+                    dimer_record = find_record_by_name(parent_records, parent_name)
+                    print(f"    Using parent molecule '{parent_name}' as dimer")
+                except ValueError:
+                    pass
+
+            if dimer_record is None:
+                E_ij = monomer_energies[i] + monomer_energies[j]
+                print(f"    No dimer Hamiltonian found, using additive approximation")
+                dimer_results[pair_key] = {"fragment": dimer_name, "best_energy": E_ij, "best_operators": [], "n_samples": 0}
+            else:
+                n_qubits_d = dimer_record.get("n_qubits", 0)
+                print(f"    ({n_qubits_d}q)")
+
+                archive_ops = None
+                if archive_dir and method == "hcgqe":
+                    archive_ops = load_archive_circuit(archive_dir, dimer_name, n_qubits_d)
+
+                if method == "exact":
+                    E_ij = exact_energy_from_hamiltonian(dimer_record)
+                    dimer_results[pair_key] = {"fragment": dimer_name, "best_energy": E_ij, "best_operators": [], "n_samples": 0}
+                else:
+                    d_res = hcgqe_fragment_energy(
+                        dimer_record, checkpoint, n_samples, target, target_option,
+                        archive_ops=archive_ops,
+                    )
+                    E_ij = d_res["best_energy"]
+                    dimer_results[pair_key] = d_res
+
+            dimer_energies[pair_key] = E_ij
+            print(f"    E = {E_ij:.6f} Ha")
+
+    # --- FMO2 reassembly ---
     e_mono = sum(monomer_energies)
-    e_pair = sum(E_ij - monomer_energies[i] - monomer_energies[j]
-                 for (i, j), E_ij in zip(
-                     [(int(k.split("_")[0]), int(k.split("_")[1])) for k in dimer_energies],
-                     dimer_energies.values()
-                 ))
+    e_pair = 0.0
+    pair_interactions = {}
+    for pair_key, E_ij in dimer_energies.items():
+        i, j = int(pair_key.split("_")[0]), int(pair_key.split("_")[1])
+        delta = E_ij - monomer_energies[i] - monomer_energies[j]
+        pair_interactions[pair_key] = delta
+        e_pair += delta
     e_fmo2 = e_mono + e_pair
 
-    print(f"\nFMO2 Energy: {e_fmo2:.6f} Ha")
-    print(f"  Monomer sum: {e_mono:.6f}")
-    print(f"  Pair correction: {e_pair:.6f}")
+    elapsed = time.time() - t_start
 
-    return {
+    print(f"\n{'=' * 60}")
+    print(f"FMO2 Energy: {e_fmo2:.6f} Ha")
+    print(f"  Monomer sum:     {e_mono:.6f}")
+    print(f"  Pair correction: {e_pair:.6f}")
+    print(f"  Elapsed: {elapsed:.1f}s")
+    print(f"{'=' * 60}")
+
+    result = {
         "method": method,
         "n_fragments": n_frags,
         "monomer_energies": monomer_energies,
+        "monomer_results": monomer_results,
         "dimer_energies": dimer_energies,
+        "dimer_results": dimer_results,
+        "pair_interactions": pair_interactions,
         "fmo2_energy": e_fmo2,
         "monomer_sum": e_mono,
         "pair_correction": e_pair,
+        "elapsed_seconds": elapsed,
+        "archive_used": archive_dir is not None,
     }
+
+    if method != "exact":
+        print(f"\n  Computing exact FMO2 for comparison...")
+        try:
+            exact_result = run_fmo2(
+                fragments_file, method="exact",
+                dimers_file=dimers_file,
+                parent_hamiltonians_file=parent_hamiltonians_file,
+            )
+            e_exact = exact_result["fmo2_energy"]
+            error_mha = abs(e_fmo2 - e_exact) * 1000
+            result["exact_fmo2_energy"] = e_exact
+            result["error_mha"] = error_mha
+            result["chemical_accuracy"] = error_mha <= 1.6
+            print(f"  Exact FMO2:  {e_exact:.6f} Ha")
+            print(f"  GQE error:   {error_mha:.2f} mHa "
+                  f"({'chemical accuracy' if error_mha <= 1.6 else 'above 1.6 mHa'})")
+        except Exception as e:
+            print(f"  Could not compute exact FMO2: {e}")
+
+    return result
 
 
 def main() -> None:
@@ -237,6 +393,12 @@ def main() -> None:
     parser.add_argument("--target", type=str, default="nvidia")
     parser.add_argument("--target-option", type=str, default="mqpu")
     parser.add_argument("--n-samples", type=int, default=100)
+    parser.add_argument("--archive-dir", type=str, default=None,
+                        help="Directory containing MAP-Elites archive JSON files")
+    parser.add_argument("--dimers", type=Path, default=None,
+                        help="JSON file with dimer Hamiltonian records")
+    parser.add_argument("--parent-hamiltonians", type=Path, default=None,
+                        help="JSON file with parent molecule Hamiltonians (for 2-fragment FMO2)")
     args = parser.parse_args()
 
     result = run_fmo2(
@@ -246,6 +408,9 @@ def main() -> None:
         target=args.target,
         target_option=args.target_option,
         n_samples=args.n_samples,
+        archive_dir=args.archive_dir,
+        dimers_file=str(args.dimers) if args.dimers else None,
+        parent_hamiltonians_file=str(args.parent_hamiltonians) if args.parent_hamiltonians else None,
     )
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
