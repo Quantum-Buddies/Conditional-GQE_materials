@@ -59,57 +59,57 @@ H-cGQE solves this by pairing a **Chemical Graph Neural Network (GNN)** and a **
 
 ```mermaid
 flowchart LR
-    subgraph Chem ["🧪 Chemistry Input"]
+    subgraph Chem ["Chemistry Input"]
         direction TB
         Mol["Molecular Geometry<br>(PySCF / OpenFermion)"]
-        Ham["Electronic Hamiltonian<br>Ĥ = Σ h_ℓ · P̂_ℓ<br>(Jordan–Wigner mapped)"]
+        Ham["Electronic Hamiltonian<br>H = Sum h_l * P_l<br>(Jordan-Wigner mapped)"]
         Graph["Atom Graph<br>(Nodes: Z, hybridization<br>Edges: bond type, R_ij)"]
         Mol --> Ham
         Mol --> Graph
     end
 
-    subgraph AI ["🤖 AI Circuit Synthesis"]
+    subgraph AI ["AI Circuit Synthesis"]
         direction TB
-        GNN["Chemistry GNN Encoder<br>(3-layer Edge-Aware MPNN<br>→ Soft Prompt Tokens)"]
-        HEnc["Hamiltonian Encoder<br>(4-layer Transformer<br>→ Cross-Attention Memory)"]
-        Dec["Operator Pool Decoder<br>(6-layer Transformer<br>→ Autoregressive Tokens)"]
+        GNN["Chemistry GNN Encoder<br>(3-layer Edge-Aware MPNN<br>to Soft Prompt Tokens)"]
+        HEnc["Hamiltonian Encoder<br>(4-layer Transformer<br>to Cross-Attention Memory)"]
+        Dec["Operator Pool Decoder<br>(6-layer Transformer<br>to Autoregressive Tokens)"]
         Pool["UCCSD Operator Pool<br>(Fermionic excitations<br>JW-mapped, 0% Z-only)"]
         Graph --> GNN
         Ham --> HEnc
         Pool --> Dec
         GNN -->|"Prefix Conditioning"| Dec
         HEnc -->|"Cross-Attention K,V"| Dec
-        Dec -->|"j₁, j₂, …, jₖ"| Seq["Operator Sequence<br>A₁, A₂, …, Aₖ"]
+        Dec -->|"j1, j2, ..., jk"| Seq["Operator Sequence<br>A1, A2, ..., Ak"]
     end
 
-    subgraph Eval ["⚡ Energy Evaluation"]
+    subgraph Eval ["Energy Evaluation"]
         direction TB
         Cache{"B200 SQLite Cache<br>(24k+ entries)"}
-        LBFGS["Truncated L-BFGS-B<br>(3–5 iters, k angles<br>θ = (θ₁, …, θₖ) ∈ ℝᵏ)"]
-        CUDAQ["CUDA-Q Statevector<br>nvidia-mqpu (3× L40S)"]
-        Cache -->|"Hit → E_cached"| E["Energy<br>E = ⟨ψ₀|U†ĤU|ψ₀⟩"]
+        LBFGS["Truncated L-BFGS-B<br>(3-5 iters, k angles<br>theta = (theta_1, ..., theta_k) in R^k)"]
+        CUDAQ["CUDA-Q Statevector<br>nvidia-mqpu (3x L40S)"]
+        Cache -->|"Hit: E_cached"| E["Energy<br>E = &lt;psi0|U*H*U|psi0&gt;"]
         Cache -->|"Miss"| LBFGS
         LBFGS --> CUDAQ
         CUDAQ --> E
         Seq --> Cache
     end
 
-    subgraph RL ["🎯 QD-GRPO Policy Update"]
+    subgraph RL ["QD-GRPO Policy Update"]
         direction TB
-        Reward["Multi-Component Reward<br>R = w₁(−E/|E_ref|) + w₂(ent)<br>+ w₃(−depth) + λ·Novelty"]
-        ME["MAP-Elites Archive<br>(10×10 grid<br>Entanglement × Depth)"]
-        DAPO["DAPO Loss<br>Asymmetric Clip (ε_low=0.2<br>ε_high=0.28) + Token-level"]
+        Reward["Multi-Component Reward<br>R = w1(-E/|E_ref|) + w2(ent)<br>+ w3(-depth) + lambda*Novelty"]
+        ME["MAP-Elites Archive<br>(10x10 grid<br>Entanglement x Depth)"]
+        DAPO["DAPO Loss<br>Asymmetric Clip (eps_low=0.2<br>eps_high=0.28) + Token-level"]
         E --> Reward
         Reward --> ME
         ME -->|"Novelty Bonus"| DAPO
-        DAPO -->|"∇θ Update"| Dec
+        DAPO -->|"grad_theta Update"| Dec
     end
 
-    subgraph Deploy ["🚀 Deployment"]
+    subgraph Deploy ["Deployment"]
         direction TB
-        QSCI["QSCI / MPS<br>28–40q Scaling"]
-        QPU["qBraid QPU<br>4–12q Hardware"]
-        FMO["FMO2 Reconstruction<br>Fragment → Parent"]
+        QSCI["QSCI / MPS<br>28-40q Scaling"]
+        QPU["qBraid QPU<br>4-12q Hardware"]
+        FMO["FMO2 Reconstruction<br>Fragment to Parent"]
         ME -->|"Elite Circuits"| QSCI
         ME -->|"Shallow Circuits"| QPU
         ME -->|"Fragments"| FMO
@@ -126,20 +126,20 @@ flowchart TD
         Atoms["Atom Features<br>(Z, charge, hybrid,<br>valence, aromaticity)"]
         Bonds["Bond Features<br>(bond order, R_ij,<br>conjugation)"]
         Globals["Global Features<br>(N_q, N_e, spin 2S+1,<br>active space size)"]
-        PauliIDs["Pauli Term IDs<br>(P̂_ℓ → integer tokens)"]
-        Coeffs["Coefficients<br>(h_ℓ ∈ ℝ)"]
+        PauliIDs["Pauli Term IDs<br>(P_l to integer tokens)"]
+        Coeffs["Coefficients<br>(h_l in R)"]
         TermMask["Term Mask<br>(valid terms only)"]
     end
 
     subgraph GNN_Layer ["Chemistry GNN Encoder (3 layers)"]
-        NodeIn["Node Linear<br>→ hidden_dim=128"]
-        EdgeIn["Edge Linear<br>→ hidden_dim=128"]
-        GlobIn["Global Linear<br>→ hidden_dim=128"]
+        NodeIn["Node Linear<br>to hidden_dim=128"]
+        EdgeIn["Edge Linear<br>to hidden_dim=128"]
+        GlobIn["Global Linear<br>to hidden_dim=128"]
         MP1["MessageBlock 1<br>(edge-weighted aggregation)"]
         MP2["MessageBlock 2<br>(residual + LayerNorm)"]
         MP3["MessageBlock 3<br>(residual + LayerNorm)"]
-        Readout["Graph Readout<br>(mean + max pool<br>→ latent_dim=128)"]
-        Prefix["Prefix Projection<br>→ conditioning_dim=128<br>+ LayerNorm"]
+        Readout["Graph Readout<br>(mean + max pool<br>to latent_dim=128)"]
+        Prefix["Prefix Projection<br>to conditioning_dim=128<br>+ LayerNorm"]
         Atoms --> NodeIn
         Bonds --> EdgeIn
         Globals --> GlobIn
@@ -147,14 +147,14 @@ flowchart TD
     end
 
     subgraph HamEnc_Layer ["Hamiltonian Encoder (4 layers)"]
-        PauliEmb["Pauli Embedding<br>(vocab → d_model=256)"]
-        CoeffProj["Coefficient Projection<br>(scalar → d_model)"]
+        PauliEmb["Pauli Embedding<br>(vocab to d_model=256)"]
+        CoeffProj["Coefficient Projection<br>(scalar to d_model)"]
         PosEnc["Positional Encoding<br>(sinusoidal)"]
         EncL1["Encoder Layer 1<br>(8-head self-attention<br>+ FFN=1024 + Dropout)"]
         EncL2["Encoder Layer 2"]
         EncL3["Encoder Layer 3"]
         EncL4["Encoder Layer 4"]
-        Mem["Encoder Memory<br>H_mem ∈ ℝ^{M×256}"]
+        Mem["Encoder Memory<br>H_mem in R^(M x 256)"]
         PauliIDs --> PauliEmb
         Coeffs --> CoeffProj
         PauliEmb --> PosEnc
@@ -172,7 +172,7 @@ flowchart TD
         DecL4["Decoder Layer 4"]
         DecL5["Decoder Layer 5"]
         DecL6["Decoder Layer 6"]
-        Logits["Output Logits<br>∈ ℝ^{L} per step<br>(L = vocab size)"]
+        Logits["Output Logits<br>in R^L per step<br>(L = vocab size)"]
         Sample["Top-p Sampling<br>(p=0.9, temp=1.0)"]
         ZMask["Z-Only Token Mask<br>(force_entanglement)"]
         LenMask["Length Token Mask<br>(n_qubits filter)"]
@@ -183,7 +183,7 @@ flowchart TD
         ZMask -.->|"block Z-only"| Sample
         LenMask -.->|"block oversize"| Sample
         Logits --> Sample
-        Sample -->|"j₁"| NextTok["Next Token"]
+        Sample -->|"j1"| NextTok["Next Token"]
         NextTok -->|"autoregressive<br>feedback"| DecL1
     end
 
@@ -198,18 +198,18 @@ flowchart TD
     Sample["Sample N=16 circuits<br>per molecule via<br>autoregressive decoder"]
     Eval["Evaluate Energies<br>via Cache or L-BFGS-B"]
     Reward["Compute Multi-Component Reward"]
-    Adv["GRPO Group-Relative<br>Advantages<br>A_i = (R_i − μ_R) / (σ_R + ε)"]
+    Adv["GRPO Group-Relative<br>Advantages<br>A_i = (R_i - mu_R) / (sigma_R + eps)"]
     DynCheck{"std(R) > 1e-8?"}
     Skip["Skip: Dynamic Sampling<br>Filter (zero advantage)"]
-    MEUpdate["Update MAP-Elites<br>Archive (10×10 grid)"]
-    Novelty["Compute Novelty Bonus<br>λ · N(circuit)"]
-    DAPO["DAPO Policy Loss<br>L = −min(r·A, clip(r, ε_lo, ε_hi)·A)<br>r = π_θ / π_old"]
-    Entropy["Entropy Bonus<br>H = −Σ p·log(p)"]
-    REPO["REPO Log-Prob Penalty<br>β · |log π_old|²"]
-    Loss["Total Loss<br>L_total = L_DAPO + c_H·H + c_β·REPO"]
+    MEUpdate["Update MAP-Elites<br>Archive (10x10 grid)"]
+    Novelty["Compute Novelty Bonus<br>lambda * N(circuit)"]
+    DAPO["DAPO Policy Loss<br>L = -min(r*A, clip(r, eps_lo, eps_hi)*A)<br>r = pi_theta / pi_old"]
+    Entropy["Entropy Bonus<br>H = -Sum p*log(p)"]
+    REPO["REPO Log-Prob Penalty<br>beta * |log pi_old|^2"]
+    Loss["Total Loss<br>L_total = L_DAPO + c_H*H + c_beta*REPO"]
     GradAcc["Gradient Accumulation<br>(4 micro-batches)"]
     Update["Optimizer Step<br>(Adam, lr=1e-5)"]
-    Buffer["Replay Buffer<br>(FIFO, size=2000<br>+ Pretrain mixing 80%→0%)"]
+    Buffer["Replay Buffer<br>(FIFO, size=2000<br>+ Pretrain mixing 80% to 0%)"]
     Next(("Next Epoch"))
 
     Start --> Sample --> Eval --> Reward --> Adv --> DynCheck
@@ -223,11 +223,11 @@ flowchart TD
     Update --> Next
 
     subgraph Reward_Components ["Reward Decomposition"]
-        R1["w₁ = 1.0<br>Energy: −E/|E_ref|<br>(normalized)"]
-        R2["w₂ = 0.1<br>Entanglement: frac(X/Y)<br>(multi-qubit gates)"]
-        R3["w₃ = 0.05<br>Depth: −depth/max_len<br>(prefer shallow)"]
-        R4["w₄ = 0.05<br>Non-Commuting: frac([A_i, A_j]≠0)"]
-        R5["λ = 1.0→0.1<br>Novelty: MAP-Elites<br>cell coverage bonus"]
+        R1["w1 = 1.0<br>Energy: -E/|E_ref|<br>(normalized)"]
+        R2["w2 = 0.1<br>Entanglement: frac(X/Y)<br>(multi-qubit gates)"]
+        R3["w3 = 0.05<br>Depth: -depth/max_len<br>(prefer shallow)"]
+        R4["w4 = 0.05<br>Non-Commuting: frac([A_i, A_j] != 0)"]
+        R5["lambda = 1.0 to 0.1<br>Novelty: MAP-Elites<br>cell coverage bonus"]
         R6["Gate: HF improvement<br>required for aux<br>rewards to activate"]
     end
 
@@ -241,19 +241,19 @@ flowchart LR
     subgraph VQE ["Traditional VQE"]
         direction TB
         VAns["Fixed Ansatz<br>(UCCSD / HEA)<br>Human-designed"]
-        VParam["k continuous params<br>θ ∈ ℝᵏ on quantum device"]
+        VParam["k continuous params<br>theta in R^k on quantum device"]
         VGrad["Parameter-Shift Gradient<br>2k circuit evals per step"]
         VOpt["Classical Optimizer<br>(L-BFGS-B / COBYLA)"]
-        VBP["⚠️ Barren Plateaus<br>∂E/∂θ → 0 exponentially<br>with system size"]
+        VBP["Warning: Barren Plateaus<br>dE/dtheta to 0 exponentially<br>with system size"]
         VAns --> VParam --> VGrad --> VOpt
         VGrad -.->|"large k"| VBP
     end
 
     subgraph CGQE ["Conditional-GQE (Ours)"]
         direction TB
-        CInput["Molecular Graph + Ĥ<br>(chemistry-conditioned)"]
+        CInput["Molecular Graph + H<br>(chemistry-conditioned)"]
         CAI["Transformer Policy<br>~8M params (classical)"]
-        CSeq["Discrete Operator Seq<br>[A₁, …, Aₖ] from UCCSD pool"]
+        CSeq["Discrete Operator Seq<br>[A1, ..., Ak] from UCCSD pool"]
         CLBFGS["L-BFGS-B Angle Opt<br>(classical, fast)"]
         CEval["Single CUDA-Q observe<br>per candidate circuit"]
         CInput --> CAI --> CSeq --> CLBFGS --> CEval
@@ -311,25 +311,25 @@ Unlike standard NLP transformers, C-GQE features an **Edge-Aware Message-Passing
 flowchart LR
     subgraph Graph ["Molecular Graph Input"]
         direction TB
-        N["Nodes (Atoms)<br>• Atomic number Z<br>• Hybridization (sp/sp²/sp³)<br>• Formal charge<br>• Valence electrons<br>• Aromaticity flag"]
-        E["Edges (Bonds)<br>• Bond order (1/2/3)<br>• 3D distance R_ij (Å)<br>• Conjugation<br>• Ring membership"]
-        G["Globals<br>• N_q (qubit count)<br>• N_e (electron count)<br>• Spin 2S+1<br>• Active space (n_occ, n_virt)"]
+        N["Nodes (Atoms)<br>- Atomic number Z<br>- Hybridization (sp/sp2/sp3)<br>- Formal charge<br>- Valence electrons<br>- Aromaticity flag"]
+        E["Edges (Bonds)<br>- Bond order (1/2/3)<br>- 3D distance R_ij (Angstrom)<br>- Conjugation<br>- Ring membership"]
+        G["Globals<br>- N_q (qubit count)<br>- N_e (electron count)<br>- Spin 2S+1<br>- Active space (n_occ, n_virt)"]
     end
 
     subgraph MPNN ["Edge-Aware Message Passing (3 layers)"]
         direction TB
-        H0["h_v⁰ = Linear(node_feat)<br>e_vw⁰ = Linear(edge_feat)<br>g⁰ = Linear(global_feat)"]
-        H1["Layer ℓ+1:<br>h_v^{ℓ+1} = h_v^ℓ + Σ_{w∈N(v)} σ(W·[h_w^ℓ, e_vw^ℓ, g^ℓ])<br>+ LayerNorm + Dropout(0.1)"]
-        H2["Layer ℓ+2:<br>Same structure, residual connections"]
-        H3["Layer ℓ+3:<br>Same structure, residual connections"]
+        H0["h_v(0) = Linear(node_feat)<br>e_vw(0) = Linear(edge_feat)<br>g(0) = Linear(global_feat)"]
+        H1["Layer l+1:<br>h_v(l+1) = h_v(l) + Sum_{w in N(v)} sigma(W * [h_w(l), e_vw(l), g(l)])<br>+ LayerNorm + Dropout(0.1)"]
+        H2["Layer l+2:<br>Same structure, residual connections"]
+        H3["Layer l+3:<br>Same structure, residual connections"]
         H0 --> H1 --> H2 --> H3
     end
 
-    subgraph Readout ["Graph Readout → Conditioning"]
+    subgraph Readout ["Graph Readout to Conditioning"]
         direction TB
-        Pool["Pooled = concat[mean(h_v), max(h_v),<br>sum(h_v), g_final]<br>→ Linear → GELU → Dropout<br>→ Linear → latent_dim=128"]
+        Pool["Pooled = concat[mean(h_v), max(h_v),<br>sum(h_v), g_final]<br>to Linear to GELU to Dropout<br>to Linear to latent_dim=128"]
         Norm["LayerNorm(latent)"]
-        Proj["Prefix Projection:<br>Linear(128→128) → GELU<br>→ Linear(128→128) → LayerNorm<br>→ Soft Prompt Tokens"]
+        Proj["Prefix Projection:<br>Linear(128 to 128) to GELU<br>to Linear(128 to 128) to LayerNorm<br>to Soft Prompt Tokens"]
         Pool --> Norm --> Proj
     end
 
@@ -369,19 +369,19 @@ In early GQE implementations, AI agents discovered a "lazy shortcut": generating
 
 ```mermaid
 flowchart LR
-    subgraph JW ["Jordan–Wigner Mapping"]
+    subgraph JW ["Jordan-Wigner Mapping"]
         direction TB
-        Fermion["Fermionic Excitation<br>a†_p a_q (single)<br>a†_p a†_q a_r a_s (double)"]
-        JWMap["JW Transform:<br>a†_p → (X_p - iY_p)/2 ⊗ Z_{p-1}...Z_0"]
+        Fermion["Fermionic Excitation<br>a+_p a_q (single)<br>a+_p a+_q a_r a_s (double)"]
+        JWMap["JW Transform:<br>a+_p to (X_p - iY_p)/2 tensor Z_{p-1}...Z_0"]
         Pauli["Pauli Words:<br>YZXI, XZYI, IYZX, ...<br>(always contain X/Y)"]
         Fermion --> JWMap --> Pauli
     end
 
     subgraph Pool ["Operator Pool Construction"]
         direction TB
-        Singles["Single Excitations:<br>τ_pq = a†_p a_q − h.c.<br>→ 2 Pauli words each"]
-        Doubles["Double Excitations:<br>τ_pqrs = a†_p a†_q a_r a_s − h.c.<br>→ 8 Pauli words each"]
-        Scale["Scale Factors:<br>θ_scale = 1/√(N_excitations)<br>(normalization)"]
+        Singles["Single Excitations:<br>tau_pq = a+_p a_q - h.c.<br>to 2 Pauli words each"]
+        Doubles["Double Excitations:<br>tau_pqrs = a+_p a+_q a_r a_s - h.c.<br>to 8 Pauli words each"]
+        Scale["Scale Factors:<br>theta_scale = 1/sqrt(N_excitations)<br>(normalization)"]
         Singles --> Pool2["Combined Pool<br>0% Z-only guaranteed"]
         Doubles --> Pool2
         Pool2 --> Scale
@@ -401,17 +401,17 @@ Standard Policy Gradient methods (PPO/GRPO) suffer from mode collapse, finding o
 
 ```mermaid
 flowchart LR
-    subgraph Archive ["MAP-Elites Archive — Per-Molecule Elite Library"]
+    subgraph Archive ["MAP-Elites Archive - Per-Molecule Elite Library"]
         direction TB
-        Grid["10×10 Grid<br>Axis 1: Entanglement Density<br>  (frac of X/Y multi-qubit ops)<br>Axis 2: Circuit Depth<br>  (gate count / max_seq_len)"]
-        Cell["Each Cell stores:<br>• Best operator sequence [A₁,…,Aₖ]<br>• Optimized angles θ*<br>• Energy E* = ⟨ψ₀|U†ĤU|ψ₀⟩<br>• Generation (epoch discovered)<br>• Visit count"]
-        Coverage["Coverage Tracking:<br>• filled_cells / 100<br>• λ = 1.0 when coverage < 25%<br>• λ = 0.5 when coverage 25–50%<br>• λ = 0.1 when coverage > 50%<br>• λ = 0.0 when coverage > 80%"]
+        Grid["10x10 Grid<br>Axis 1: Entanglement Density<br>  (frac of X/Y multi-qubit ops)<br>Axis 2: Circuit Depth<br>  (gate count / max_seq_len)"]
+        Cell["Each Cell stores:<br>- Best operator sequence [A1,...,Ak]<br>- Optimized angles theta*<br>- Energy E* = &lt;psi0|U*H*U|psi0&gt;<br>- Generation (epoch discovered)<br>- Visit count"]
+        Coverage["Coverage Tracking:<br>- filled_cells / 100<br>- lambda = 1.0 when coverage < 25%<br>- lambda = 0.5 when coverage 25-50%<br>- lambda = 0.1 when coverage > 50%<br>- lambda = 0.0 when coverage > 80%"]
         Grid --> Cell --> Coverage
     end
 
     subgraph Selection ["Elite Selection for Replay"]
         direction TB
-        Sample2["Sample from archive:<br>• 60% from filled cells (weighted by energy)<br>• 30% from empty cells (novelty-driven)<br>• 10% random exploration"]
+        Sample2["Sample from archive:<br>- 60% from filled cells (weighted by energy)<br>- 30% from empty cells (novelty-driven)<br>- 10% random exploration"]
         Inject["Inject into replay buffer<br>alongside online samples"]
         Sample2 --> Inject
     end
@@ -432,22 +432,22 @@ sequenceDiagram
     participant CUDAQ as CUDA-Q Simulator
     participant LBFGS as L-BFGS-B Optimizer
 
-    Policy->>Eval: Generate operator seq [A₁, A₂, …, Aₖ]
+    Policy->>Eval: Generate operator seq [A1, A2, ..., Ak]
     Eval->>Eval: Check DedupCache (MD5 hash of ops)
     alt Cache Hit
-        Eval-->>Policy: Return cached E* (μs)
+        Eval-->>Policy: Return cached E* (microseconds)
     else Cache Miss
-        Eval->>LBFGS: Initialize θ₀ = (0.01, …, 0.01)
+        Eval->>LBFGS: Initialize theta_0 = (0.01, ..., 0.01)
         loop Iterations 1..max_iters
-            LBFGS->>CUDAQ: observe(kernel, Ĥ, n_qubits, n_e, pauli_words, θ)
-            CUDAQ-->>LBFGS: E = ⟨ψ|Ĥ|ψ⟩ (expectation value)
+            LBFGS->>CUDAQ: observe(kernel, H, n_qubits, n_e, pauli_words, theta)
+            CUDAQ-->>LBFGS: E = expectation(psi|H|psi)
             LBFGS->>LBFGS: Approximate inverse Hessian
             LBFGS->>LBFGS: Line search + Wolfe conditions
-            LBFGS->>LBFGS: Update θ ← θ + Δθ
+            LBFGS->>LBFGS: Update theta = theta + delta_theta
         end
         LBFGS-->>Eval: Return E* (optimized)
         Eval->>Eval: Store in DedupCache
-        Eval-->>Policy: Return E* (ms–s depending on n_qubits)
+        Eval-->>Policy: Return E* (ms-s depending on n_qubits)
     end
 ```
 
@@ -462,26 +462,26 @@ sequenceDiagram
 flowchart TD
     subgraph Cache_Build ["Stage 1: Cache Precompute (B200 GPU)"]
         direction TB
-        Mols1["35 GIC Molecules<br>(4–28 qubits)"]
-        Gen["For each molecule:<br>• Build UCCSD operator pool<br>• Sample 500–2000 random sequences<br>• L-BFGS-B optimize angles<br>• CUDA-Q observe → E*"]
+        Mols1["35 GIC Molecules<br>(4-28 qubits)"]
+        Gen["For each molecule:<br>- Build UCCSD operator pool<br>- Sample 500-2000 random sequences<br>- L-BFGS-B optimize angles<br>- CUDA-Q observe to E*"]
         Store["SQLite: (MD5_hash, energy,<br>molecule, n_qubits, operators)<br>24,000+ entries"]
         Mols1 --> Gen --> Store
     end
 
-    subgraph Recovery ["Stage 2: Cache → Pretrain JSON"]
+    subgraph Recovery ["Stage 2: Cache to Pretrain JSON"]
         direction TB
         Load["Load SQLite cache"]
-        Replay2["Replay deterministic<br>circuit generation<br>(same seed → same ops)"]
-        Match["Match hash → recover<br>(operators, energy) pairs"]
+        Replay2["Replay deterministic<br>circuit generation<br>(same seed = same ops)"]
+        Match["Match hash to recover<br>(operators, energy) pairs"]
         Export["Export JSON:<br>17,408 samples across 34 molecules"]
         Load --> Replay2 --> Match --> Export
     end
 
     subgraph Offline ["Stage 3: Offline RL Training (Any GPU)"]
         direction TB
-        Prefill["Pre-fill replay buffer<br>80% pretrain fraction<br>→ 1,600 cached samples"]
+        Prefill["Pre-fill replay buffer<br>80% pretrain fraction<br>to 1,600 cached samples"]
         Train["DAPO policy updates<br>using cached energies<br>NO CUDA-Q needed"]
-        Decay["Pretrain fraction decays<br>80% → 0% over 100 epochs<br>→ smooth online transition"]
+        Decay["Pretrain fraction decays<br>80% to 0% over 100 epochs<br>to smooth online transition"]
         Prefill --> Train --> Decay
     end
 
@@ -498,24 +498,24 @@ Direct statevector simulation breaks above 28 qubits ($2^{28} \approx 268$M ampl
 
 ```mermaid
 flowchart LR
-    subgraph Brute ["Brute-Force SV (❌ Infeasible)"]
-        SV["2⁴⁰ = 1.1×10¹²<br>amplitudes<br>~1 TB GPU memory<br>→ OOM on any GPU"]
+    subgraph Brute ["Brute-Force SV (Infeasible)"]
+        SV["2^40 = 1.1x10^12<br>amplitudes<br>~1 TB GPU memory<br>to OOM on any GPU"]
     end
 
-    subgraph QSCI_P ["QSCI (✅ 28–40q)"]
+    subgraph QSCI_P ["QSCI (28-40q)"]
         direction TB
-        Sample3["Sample quantum circuit<br>→ bitstring distribution"]
+        Sample3["Sample quantum circuit<br>to bitstring distribution"]
         Select["Select top-K determinants<br>by probability (K ~ 1000)"]
-        Subspace["Build subspace Hamiltonian<br>H_sub ∈ ℂ^{K×K}"]
+        Subspace["Build subspace Hamiltonian<br>H_sub in C^(K x K)"]
         Diag["Classical diagonalization<br>E = eigmin(H_sub)"]
         Sample3 --> Select --> Subspace --> Diag
     end
 
-    subgraph FMO2_P ["FMO2 (✅ Macromolecules)"]
+    subgraph FMO2_P ["FMO2 (Macromolecules)"]
         direction TB
-        Frag["Fragment molecule into<br>monomers + dimers<br>(8–12 qubits each)"]
+        Frag["Fragment molecule into<br>monomers + dimers<br>(8-12 qubits each)"]
         EvalF["Evaluate each fragment<br>on GPU or QPU"]
-        Reassemble["Reassemble parent energy:<br>E_FMO2 = Σ E_i − Σ E_ij<br>(pairwise correction)"]
+        Reassemble["Reassemble parent energy:<br>E_FMO2 = Sum E_i - Sum E_ij<br>(pairwise correction)"]
         Frag --> EvalF --> Reassemble
     end
 
@@ -727,16 +727,16 @@ The Phase 3 pipeline is a 3-stage hybrid GPU→GPU→QPU workflow:
 flowchart LR
     subgraph S1 ["Stage 1: Precompute (B200)"]
         direction TB
-        H1["Generate Hamiltonians<br>(PySCF → JW mapping)"]
-        H2["H-cGQE Inference<br>(sample 500–2000 circuits<br>per molecule)"]
-        H3["L-BFGS-B + CUDA-Q<br>observe → energy"]
+        H1["Generate Hamiltonians<br>(PySCF to JW mapping)"]
+        H2["H-cGQE Inference<br>(sample 500-2000 circuits<br>per molecule)"]
+        H3["L-BFGS-B + CUDA-Q<br>observe to energy"]
         H4[("SQLite Cache<br>24k+ entries")]
         H1 --> H2 --> H3 --> H4
     end
 
     subgraph S2 ["Stage 2: Offline RL (L40S)"]
         direction TB
-        R1["Load cache →<br>pretrain JSON"]
+        R1["Load cache to<br>pretrain JSON"]
         R2["Pre-fill replay buffer<br>(80% pretrain fraction)"]
         R3["QD-GRPO training<br>DAPO + MAP-Elites<br>+ novelty bonus"]
         R4["RL-tuned checkpoint<br>h_cgqe_rl_dapo_phase3.pt"]
@@ -746,8 +746,8 @@ flowchart LR
     subgraph S3 ["Stage 3: QPU Validation"]
         direction TB
         Q1["Generate QWC manifests<br>(QASM 2.0 export)"]
-        Q2["qBraid submission<br>→ Rigetti Cepheus<br>(108q superconducting)"]
-        Q3["Retrieve + parse<br>shot counts → expectations"]
+        Q2["qBraid submission<br>to Rigetti Cepheus<br>(108q superconducting)"]
+        Q3["Retrieve + parse<br>shot counts to expectations"]
         Q4["Compare: QPU vs SV<br>vs exact FCI"]
         Q1 --> Q2 --> Q3 --> Q4
     end
