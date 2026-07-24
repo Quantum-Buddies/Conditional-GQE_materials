@@ -624,9 +624,9 @@ bash scripts/train_rl.sh smoke
 ### 4. Training
 
 ```bash
-bash scripts/train_rl.sh full          # cache-warmup → online-rl (~3h on H200)
-bash scripts/train_rl.sh cache-warmup  # 30 epochs, cache-only, no CUDA-Q (~45 min)
-bash scripts/train_rl.sh online-rl     # 50 epochs, write-through cache (~1.5-2h)
+bash scripts/train_rl.sh full          # write-through RL from SFT (skips cache-only)
+bash scripts/train_rl.sh online-rl     # 50 epochs, write-through cache + CUDA-Q misses
+bash scripts/train_rl.sh cache-warmup  # buffer imitation only (weak on-policy RL)
 ```
 
 ### 5. Evaluation
