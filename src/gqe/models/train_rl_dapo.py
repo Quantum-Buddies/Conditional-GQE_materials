@@ -40,10 +40,13 @@ import torch.nn.functional as F
 from tqdm import tqdm
 from scipy.optimize import minimize
 
-try:
-    import cudaq
-except ImportError:
-    cudaq = None
+# CUDA-Q is imported lazily via _ensure_cudaq().
+# Triton (torch.compile) and CUDA-Q both embed LLVM; importing cudaq BEFORE
+# torch.compile aborts with:
+#   CommandLine Error: Option 'debug-counter' registered more than once!
+# Import order must be: torch.compile first, then cudaq. Skip cudaq entirely
+# for --cache-only runs.
+cudaq = None  # type: ignore[assignment]
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
@@ -237,13 +240,16 @@ def sample_sequences_with_logprobs(
                 probs = probs * mask
                 probs = probs / probs.sum(dim=-1, keepdim=True).clamp_min(1e-8)
 
-            # Exploration floor: mix with uniform distribution to enforce minimum entropy.
-            # When the model is extremely confident (e.g. 99% on one token), temperature
-            # scaling alone is insufficient — even T=50 can't flatten a logit gap of 30.
-            # Distribution mixing directly controls the entropy floor: with eps=0.3,
-            # the top token gets at most 0.7*0.99 + 0.3/V ≈ 0.70, giving H ≈ 1.5+.
+            # Exploration floor: mix with uniform over *length-valid* tokens only.
+            # Mixing over the full vocab reintroduces wrong-length Pauli words that
+            # can never hit the energy cache (exact-length keys) and waste CUDA-Q.
             if explore_eps > 0.0:
-                uniform = torch.ones_like(probs) / probs.size(-1)
+                if length_mask is not None:
+                    valid = length_mask.to(dtype=probs.dtype)
+                    uniform = valid / valid.sum().clamp_min(1.0)
+                    uniform = uniform.unsqueeze(0).expand_as(probs)
+                else:
+                    uniform = torch.ones_like(probs) / probs.size(-1)
                 probs = (1.0 - explore_eps) * probs + explore_eps * uniform
                 # Renormalize for safety
                 probs = probs / probs.sum(dim=-1, keepdim=True).clamp_min(1e-8)
@@ -331,11 +337,31 @@ def _pad_pauli_word(word: str, n_qubits: int) -> str:
 _gqe_kernel = None
 _spin_ham_cache: dict[str, Any] = {}
 _current_cudaq_target: tuple[str, str] | None = None
+_cudaq_import_attempted = False
+
+
+def _ensure_cudaq():
+    """Lazy-import cudaq AFTER torch.compile has loaded Triton's LLVM.
+
+    Returns the cudaq module, or None if unavailable. Safe to call repeatedly.
+    """
+    global cudaq, _cudaq_import_attempted
+    if _cudaq_import_attempted:
+        return cudaq
+    _cudaq_import_attempted = True
+    try:
+        import cudaq as _cq  # type: ignore[import-untyped]
+        cudaq = _cq
+    except ImportError:
+        cudaq = None
+    return cudaq
 
 
 def _get_gqe_kernel():
     global _gqe_kernel
-    if _gqe_kernel is None and cudaq is not None:
+    if _gqe_kernel is None and _ensure_cudaq() is not None:
+        # Kernel source MUST reference the global name `cudaq` — CUDA-Q's
+        # AST/source parser resolves types and ops from that identifier.
         @cudaq.kernel
         def kernel(n_q: int, n_el: int, pauli_words: list[cudaq.pauli_word], thetas: list[float]):
             q = cudaq.qvector(n_q)
@@ -360,7 +386,8 @@ def _get_cached_spin_ham(molecule_record: dict[str, Any], cache_key: str | None 
 def _set_cudaq_target_cached(target: str, option: str = "") -> None:
     """Avoid redundant cudaq.set_target calls (they stall and flush GPU work)."""
     global _current_cudaq_target
-    if cudaq is None:
+    cq = _ensure_cudaq()
+    if cq is None:
         return
     # Blackwell: prefer explicit fp32 so CUDAQ_ALLOW_FP32_EMULATED BF16x9 path is used
     if target == "nvidia" and (not option or option == ""):
@@ -369,9 +396,9 @@ def _set_cudaq_target_cached(target: str, option: str = "") -> None:
     if _current_cudaq_target == key:
         return
     if option:
-        cudaq.set_target(target, option=option)
+        cq.set_target(target, option=option)
     else:
-        cudaq.set_target(target)
+        cq.set_target(target)
     _current_cudaq_target = key
 
 
@@ -419,7 +446,8 @@ def _enable_blackwell_torch_optimizations(device: torch.device) -> None:
 
 def _warmup_cudaq_observe(n_qubits: int = 4, n_electrons: int = 2) -> None:
     """Force one sync observe so JIT/PTX compile happens before the training loop."""
-    if cudaq is None:
+    cq = _ensure_cudaq()
+    if cq is None:
         return
     kernel = _get_gqe_kernel()
     # Minimal 4q Z-only Hamiltonian so compile path is exercised without big allocs.
@@ -430,9 +458,9 @@ def _warmup_cudaq_observe(n_qubits: int = 4, n_electrons: int = 2) -> None:
     }
     try:
         spin_ham = hamiltonian_to_spin_operator(dummy)
-        words = [cudaq.pauli_word("X" + "I" * (n_qubits - 1))]
+        words = [cq.pauli_word("X" + "I" * (n_qubits - 1))]
         thetas = [0.01]
-        cudaq.observe(kernel, spin_ham, n_qubits, n_electrons, words, thetas)
+        cq.observe(kernel, spin_ham, n_qubits, n_electrons, words, thetas)
         print("  CUDA-Q observe warmup complete (JIT primed)", flush=True)
     except Exception as e:
         print(f"  CUDA-Q warmup skipped: {e}", flush=True)
@@ -494,7 +522,7 @@ def _optimize_theta_quick(
     Returns (optimized_energy, best_theta_scalar).
     Uses scipy.optimize.minimize on the CUDA-Q energy function.
     """
-    if cudaq is None or not operators:
+    if _ensure_cudaq() is None or not operators:
         return 0.0, initial_theta
 
     kernel = _get_gqe_kernel()
@@ -548,7 +576,7 @@ def evaluate_energies_batch(
         show_progress: Print chunk progress (helps diagnose stalls).
         mol_name: Label for progress lines.
     """
-    if cudaq is None:
+    if _ensure_cudaq() is None:
         return [0.0] * len(operators_batch)
 
     kernel = _get_gqe_kernel()
@@ -656,7 +684,7 @@ def evaluate_energies_parallel(
     n_gpus: int = 1,
 ) -> list[float]:
     """Evaluate energies in parallel across GPUs using CUDA-Q mqpu."""
-    if cudaq is None:
+    if _ensure_cudaq() is None:
         return [0.0] * len(operators_batch)
 
     kernel = _get_gqe_kernel()
@@ -744,7 +772,7 @@ def evaluate_energies_qd(
                 n_misses += 1
         return energies, {"hits": n_hits, "misses": n_misses}
 
-    if cudaq is None:
+    if _ensure_cudaq() is None:
         return [0.0] * len(operators_batch), {"hits": 0, "misses": 0}
 
     kernel = _get_gqe_kernel()
@@ -1682,30 +1710,42 @@ def main() -> None:
         print(f"Using nn.DataParallel with {n_gpus} GPUs")
 
     # --- torch.compile: fuse kernels + reduce Python overhead ---
-    # For small models (~10M params), Python/launch overhead dominates GPU time.
-    # torch.compile with reduce-overhead mode uses CUDA graphs internally,
-    # eliminating kernel launch latency. ~1.5-3x speedup on L40S for 10M models.
+    # Encoder batch size varies (sampling n_samples vs replay buffer batches).
+    # With dynamic=False + reduce-overhead, Dynamo recompile_limit (8) is hit
+    # and falls back to eager — use dynamic=True on the encoder too.
     use_torch_compile = args.torch_compile and torch.cuda.is_available()
     if use_torch_compile:
         compile_mode = args.compile_mode
         try:
-            if is_dp:
-                model.module.encoder = torch.compile(
-                    model.module.encoder, mode=compile_mode, dynamic=False,
-                )
-                model.module.decoder = torch.compile(
-                    model.module.decoder, mode=compile_mode, dynamic=False,
-                )
-            else:
-                model.encoder = torch.compile(
-                    model.encoder, mode=compile_mode, dynamic=False,
-                )
-                model.decoder = torch.compile(
-                    model.decoder, mode=compile_mode, dynamic=False,
-                )
-            print(f"torch.compile enabled (mode={compile_mode}, dynamic=False)")
+            import torch._dynamo
+            # Allow more specialized graphs across mol/batch shapes before eager.
+            torch._dynamo.config.cache_size_limit = max(
+                32, int(getattr(torch._dynamo.config, "cache_size_limit", 8))
+            )
+            torch._dynamo.config.accumulated_cache_size_limit = max(
+                256, int(getattr(torch._dynamo.config, "accumulated_cache_size_limit", 64))
+            )
+            enc = model.module.encoder if is_dp else model.encoder
+            dec = model.module.decoder if is_dp else model.decoder
             if compile_mode == "reduce-overhead":
-                print("  CUDA graphs will be used internally for repeated shapes")
+                # dynamic=True: avoid recompile on batch/term-count shape changes.
+                # Still skip CUDA graphs for decoder (AR growing seq).
+                enc = torch.compile(enc, mode="reduce-overhead", dynamic=True)
+                dec = torch.compile(dec, mode="default", dynamic=True)
+                dec_note = "decoder=default/dynamic (AR-safe)"
+            else:
+                enc = torch.compile(enc, mode=compile_mode, dynamic=True)
+                dec = torch.compile(dec, mode=compile_mode, dynamic=True)
+                dec_note = f"decoder={compile_mode}/dynamic"
+            if is_dp:
+                model.module.encoder = enc
+                model.module.decoder = dec
+            else:
+                model.encoder = enc
+                model.decoder = dec
+            print(f"torch.compile enabled (encoder={compile_mode}/dynamic, {dec_note})")
+            if compile_mode == "reduce-overhead":
+                print("  CUDA graphs OK when shapes stabilize; decoder AR-safe")
         except Exception as e:
             print(f"WARNING: torch.compile failed ({e}), using eager mode")
             use_torch_compile = False
@@ -1769,12 +1809,19 @@ def main() -> None:
         print(f"Using BF16 mixed precision (prevents FP16 entropy collapse)")
         scaler = None
 
-    # Setup CUDA-Q
+    # Setup CUDA-Q (AFTER torch.compile — Triton and CUDA-Q both embed LLVM;
+    # importing cudaq first then calling torch.compile aborts the process).
     n_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 1
     if args.single_gpu:
         n_gpus = 1
         print("Single-GPU mode forced (L40S PCIe IPC workaround)")
-    if cudaq and args.target:
+    if args.cache_only:
+        print(
+            "cache-only mode: skipping CUDA-Q import "
+            "(avoids LLVM clash with torch.compile / Triton)",
+            flush=True,
+        )
+    elif args.target and _ensure_cudaq() is not None:
         try:
             if args.target == "nvidia" and args.target_option == "mqpu":
                 _set_cudaq_target_cached("nvidia", "mqpu")
@@ -1798,6 +1845,8 @@ def main() -> None:
             )
         except Exception as e:
             print(f"Warning: CUDA-Q target setup failed: {e}")
+    elif args.target:
+        print("WARNING: --target set but cudaq is not installed; energy eval will fail")
 
     # Set MPS bond dimension if using MPS
     if args.mps_bond != 64:
@@ -1820,12 +1869,16 @@ def main() -> None:
         print(f"  {mol_name}: {mol_data['n_qubits']} qubits, "
               f"HF={mol_data['hf_energy'] or 'N/A'}, "
               f"FCI={fci_str}")
-        # Pre-build SpinOperator once (large Hamiltonians are expensive to rebuild)
-        try:
-            mol_data["spin_ham"] = _get_cached_spin_ham(mol_data["record"], cache_key=mol_name)
-        except Exception as e:
-            print(f"    WARNING: spin_ham cache failed for {mol_name}: {e}")
+        # Pre-build SpinOperator once (large Hamiltonians are expensive to rebuild).
+        # Skip in cache-only mode so we never import cudaq (LLVM clash with Triton).
+        if args.cache_only:
             mol_data["spin_ham"] = None
+        else:
+            try:
+                mol_data["spin_ham"] = _get_cached_spin_ham(mol_data["record"], cache_key=mol_name)
+            except Exception as e:
+                print(f"    WARNING: spin_ham cache failed for {mol_name}: {e}")
+                mol_data["spin_ham"] = None
         molecules_data.append(mol_data)
 
     if not molecules_data:
@@ -1869,6 +1922,19 @@ def main() -> None:
         print(f"\nEnergy cache: {args.energy_cache} ({cstats['n_entries']} entries)")
         if args.cache_only:
             print("  cache-only mode: CUDA-Q disabled on misses (offline RL)")
+            print(
+                "  WARNING: on-policy samples almost never match the precomputed "
+                "cache keys → miss_penalty=HF for every circuit → reward std≈0 → "
+                "DAPO/GRPO advantage collapse. Prefer write-through (drop --cache-only).",
+                flush=True,
+            )
+            if args.adaptive_theta:
+                print(
+                    "  Disabling --adaptive-theta under --cache-only "
+                    "(would lazy-import CUDA-Q and stall on large molecules).",
+                    flush=True,
+                )
+                args.adaptive_theta = False
         else:
             print("  write-through mode: misses evaluate via CUDA-Q and are stored")
     elif args.cache_only:
@@ -2212,8 +2278,19 @@ def main() -> None:
                     )
 
                 # --- Phase 3: Compute rewards ---
-                # Adaptive theta: optimize coefficients for the best circuit in the batch
-                if args.adaptive_theta and len(energies) > 0:
+                # Adaptive theta: optimize coefficients for the best circuit in the batch.
+                # MUST NOT run under --cache-only: _optimize_theta_quick lazy-imports
+                # cudaq and runs L-BFGS observes (was the 600–1000s formaldehyde/ethylene
+                # stall while falsely appearing as "energy eval").
+                # Also skip for large Hamiltonians — truncated L-BFGS observe dominates
+                # wall time far more than the RL step itself.
+                n_q_mol = int(mol_data.get("n_qubits", 0))
+                if (
+                    args.adaptive_theta
+                    and (not args.cache_only)
+                    and n_q_mol <= 18
+                    and len(energies) > 0
+                ):
                     best_idx = int(np.argmin(energies))
                     if operator_lists[best_idx]:
                         opt_energy, opt_theta = _optimize_theta_quick(

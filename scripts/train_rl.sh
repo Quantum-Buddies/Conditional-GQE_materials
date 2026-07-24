@@ -2,13 +2,15 @@
 # =============================================================================
 # Portable RL Training Launcher for qBraid GPU Instances
 # =============================================================================
-# Two-phase cache-boosted DAPO RL training:
-#   Phase A (cache-warmup): 30 epochs, --cache-only, no CUDA-Q calls (~45 min)
-#   Phase B (online-rl):    50 epochs, write-through cache, CUDA-Q for misses (~1.5-2h)
+# Modes:
+#   smoke        — 2 epochs, 2 molecules (~2 min)
+#   cache-warmup — --cache-only buffer imitation (weak on-policy RL; see README)
+#   online-rl    — write-through energy cache + CUDA-Q on misses (recommended)
+#   full         — write-through RL from SFT (skips cache-only)
 #
 # Usage:
 #   bash scripts/train_rl.sh [smoke|cache-warmup|online-rl|full]
-#   Default: full (cache-warmup then online-rl)
+#   Default: full
 #
 # All paths are relative to the repo root (auto-detected).
 # =============================================================================
@@ -36,15 +38,18 @@ LOG_DIR="$ROOT/results/train"
 mkdir -p "$LOG_DIR"
 
 # --- Auto-detect GPU-specific limits ---
-# H200 141GB → 30q SV, H100 80GB → 26q SV, B200 180GB → 32q SV, A100 80GB → 26q
-MAX_QUBITS=28
-MPS_THRESHOLD=24
+# Write-through RL: cap below SV blowups. ethylene=28q / formaldehyde=24q can
+# take 10–17 min per molecule when every sample is a CUDA-Q miss.
+# Override: MAX_QUBITS_OVERRIDE=28 bash scripts/train_rl.sh full
+MAX_QUBITS=22
+MPS_THRESHOLD=18
 case "$GPU_CC" in
-    9.0*)  [ "$GPU_VRAM_GB" -ge 140 ] 2>/dev/null && MAX_QUBITS=30 || MAX_QUBITS=26 ;;
-    10.0*) MAX_QUBITS=32; MPS_THRESHOLD=28 ;;
-    8.0*)  MAX_QUBITS=26; MPS_THRESHOLD=22 ;;
-    *)     MAX_QUBITS=24; MPS_THRESHOLD=20 ;;
+    9.0*)  [ "$GPU_VRAM_GB" -ge 140 ] 2>/dev/null && MAX_QUBITS=22 || MAX_QUBITS=20 ;;
+    10.0*) MAX_QUBITS=26; MPS_THRESHOLD=22 ;;
+    8.0*)  MAX_QUBITS=20; MPS_THRESHOLD=16 ;;
+    *)     MAX_QUBITS=18; MPS_THRESHOLD=14 ;;
 esac
+MAX_QUBITS="${MAX_QUBITS_OVERRIDE:-$MAX_QUBITS}"
 
 # --- Auto-generate molecule list from hamiltonians JSON ---
 MOLECULES="$(python3 -c "
@@ -91,6 +96,14 @@ check_required() {
 }
 
 # --- Common RL Arguments (shared across all modes) ---
+# --- Common training args ---
+# NOTE: torch.compile (Triton) and CUDA-Q both embed LLVM. train_rl_dapo.py
+# lazy-imports cudaq AFTER torch.compile. --cache-only must also disable
+# --adaptive-theta (that path calls CUDA-Q L-BFGS and re-imports cudaq).
+#
+# Cache-only Phase A is a dead on-policy loop when ecache≈0%: every miss gets
+# the same HF penalty → GRPO/DAPO advantage collapses → no learning. Prefer
+# write-through online-rl (or `full`, which now skips cache-only).
 COMMON_ARGS=(
     --checkpoint "$SFT_CKPT"
     --hamiltonians "$HAMILTONIANS"
@@ -136,7 +149,7 @@ COMMON_ARGS=(
     --curriculum-warmup 10
     --curriculum-steps 3
     --pretrain-data "$PRETRAIN_DATA"
-    --pretrain-fraction 0.8
+    --pretrain-fraction 0.5
     --adaptive-theta
     --adaptive-theta-iters 10
     --qd-mode
@@ -174,6 +187,7 @@ run_smoke() {
         --n-iters 4 \
         --reuse-iters 3 \
         --cache-only \
+        --no-adaptive-theta \
         --pretrain-decay-epochs 2 \
         --no-curriculum \
         2>&1 | tee "$LOG_DIR/rl_smoke.log"
@@ -182,15 +196,21 @@ run_smoke() {
 }
 
 # =====================================================================
-# Mode: cache-warmup — 30 epochs, --cache-only, no CUDA-Q (~45 min)
+# Mode: cache-warmup — 30 epochs, --cache-only (off-policy buffer only)
+# WARNING: on-policy ecache≈0% → HF-penalty flat rewards → advantage collapse.
+# Prefer `online-rl` / `full` for real learning. This mode is kept for buffer
+# imitation experiments only.
 # =====================================================================
 run_cache_warmup() {
     echo "============================================================"
-    echo "  PHASE A: Cache-Only Warmup — 30 epochs (~45 min)"
+    echo "  PHASE A: Cache-Only Warmup — 30 epochs"
     echo "  GPU     : $GPU_NAME (${GPU_VRAM_GB}GB, CC $GPU_CC)"
     echo "  Max q   : $MAX_QUBITS"
     echo "  Mols    : $(echo $MOLECULES | wc -w) molecules"
     echo "  Cache   : $ENERGY_CACHE"
+    echo "  NOTE    : --no-adaptive-theta (CUDA-Q forbidden under cache-only)"
+    echo "  WARNING : on-policy cache hits are typically ~0%; learning signal"
+    echo "            comes only from pretrain buffer mixing, not RL energies."
     echo "============================================================"
     check_required
 
@@ -204,6 +224,7 @@ run_cache_warmup() {
         --n-iters 4 \
         --reuse-iters 3 \
         --cache-only \
+        --no-adaptive-theta \
         --pretrain-decay-epochs 30 \
         2>&1 | tee "$LOG_DIR/rl_cache_warmup.log"
 
@@ -216,24 +237,24 @@ run_cache_warmup() {
 }
 
 # =====================================================================
-# Mode: online-rl — 50 epochs, write-through cache, CUDA-Q misses (~1.5-2h)
+# Mode: online-rl — 50 epochs, write-through cache, CUDA-Q misses
 # =====================================================================
 run_online_rl() {
     echo "============================================================"
-    echo "  PHASE B: Online RL — 50 epochs (~1.5-2h)"
+    echo "  Online RL (write-through) — 50 epochs"
     echo "  GPU     : $GPU_NAME (${GPU_VRAM_GB}GB, CC $GPU_CC)"
     echo "  Max q   : $MAX_QUBITS"
-    echo "  Cache   : $ENERGY_CACHE (write-through)"
+    echo "  Cache   : $ENERGY_CACHE (write-through CUDA-Q on misses)"
     echo "============================================================"
 
-    # Load warmup checkpoint if available, else fall back to SFT
+    # Prefer SFT directly — cache-only warmup is not required for learning.
     local CKPT
     if [ -f "$OUTPUT_CKPT_WARMUP" ]; then
         CKPT="$OUTPUT_CKPT_WARMUP"
         echo "  Loading warmup checkpoint: $CKPT"
     else
         CKPT="$SFT_CKPT"
-        echo "  No warmup checkpoint found — loading SFT: $CKPT"
+        echo "  Loading SFT checkpoint: $CKPT"
     fi
 
     local START=$(date +%s)
@@ -246,7 +267,9 @@ run_online_rl() {
         --n-samples 16 \
         --n-iters 4 \
         --reuse-iters 3 \
-        --pretrain-decay-epochs 50 \
+        --pretrain-fraction 0.5 \
+        --pretrain-decay-epochs 20 \
+        --kl-coef 0.1 \
         --eval-async \
         --eval-async-chunk 24 \
         2>&1 | tee "$LOG_DIR/rl_online.log"
@@ -255,18 +278,30 @@ run_online_rl() {
     local RATE; RATE=$(get_credit_rate)
     local COST; COST=$(python3 -c "print(f'{$ELAPSED * $RATE:.1f}')" 2>/dev/null || echo "N/A")
     echo ""
-    echo "  Phase B complete: ${ELAPSED} min (~${COST} credits)"
+    echo "  Online RL complete: ${ELAPSED} min (~${COST} credits)"
     echo "  Output: $OUTPUT_CKPT"
 }
 
 # =====================================================================
-# Mode: full — cache-warmup then online-rl sequentially (~3h total)
+# Mode: full — write-through RL from SFT (skips dead cache-only Phase A)
 # =====================================================================
 run_full() {
     local TOTAL_START=$(date +%s)
 
-    run_cache_warmup
+    echo "============================================================"
+    echo "  FULL TRAINING — write-through RL from SFT"
+    echo "  Skipping cache-only Phase A (0% on-policy hit → advantage collapse)."
+    echo "  To force the old two-phase pipeline: bash scripts/train_rl.sh cache-warmup"
+    echo "  then bash scripts/train_rl.sh online-rl"
+    echo "============================================================"
     echo ""
+
+    # Ensure online-rl loads SFT (not a half-trained cache-only warmup).
+    if [ -f "$OUTPUT_CKPT_WARMUP" ]; then
+        echo "  Note: found $OUTPUT_CKPT_WARMUP — online-rl will prefer it."
+        echo "  Remove it if you want a clean SFT start."
+    fi
+
     run_online_rl
 
     local TOTAL=$(( ($(date +%s) - TOTAL_START) / 60 ))
@@ -294,9 +329,9 @@ case "$MODE" in
     *)
         echo "Usage: bash scripts/train_rl.sh [smoke|cache-warmup|online-rl|full]"
         echo "  smoke        : 2 epochs, 2 molecules, sanity check (~2 min)"
-        echo "  cache-warmup : 30 epochs, cache-only, no CUDA-Q (~45 min)"
-        echo "  online-rl    : 50 epochs, write-through cache, CUDA-Q misses (~1.5-2h)"
-        echo "  full         : cache-warmup then online-rl (~3h total)"
+        echo "  cache-warmup : 30 epochs, cache-only (buffer imitation only; weak RL)"
+        echo "  online-rl    : 50 epochs, write-through cache + CUDA-Q misses"
+        echo "  full         : write-through RL from SFT (skips cache-only)"
         exit 1
         ;;
 esac

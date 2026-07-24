@@ -79,6 +79,9 @@ export CUDAQ_MGPU_FUSE="${CUDAQ_MGPU_FUSE:-6}"
 export TORCH_ALLOW_TF32_CUBLAS_OVERRIDE="${TORCH_ALLOW_TF32_CUBLAS_OVERRIDE:-1}"
 export NVIDIA_TF32_OVERRIDE="${NVIDIA_TF32_OVERRIDE:-1}"
 
+# Avoid Dynamo graph breaks on Transformer causal-mask .item() / scalar ops.
+export TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS="${TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS:-1}"
+
 # --- Portable LD_LIBRARY_PATH from pip-installed nvidia packages ---
 _NVIDIA_SITE="$(python3 -c "import site; print(site.getsitepackages()[0])" 2>/dev/null || echo "")"
 if [ -n "$_NVIDIA_SITE" ] && [ -d "$_NVIDIA_SITE/nvidia" ]; then

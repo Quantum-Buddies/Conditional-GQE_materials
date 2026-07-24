@@ -489,8 +489,8 @@ flowchart TD
 ```
 
 - **SQLite Cache**: 24,000+ entries keyed by MD5 hash of operator sequence (`results/train/rl_energy_cache.sqlite`).
-- **Offline Pretraining**: `src/gqe/data/cache_to_pretrain.py` recovers 17,408 (operators, energy) pairs by replaying deterministic circuit generation. This allows **100% offline RL policy updates** without CUDA-Q.
-- **Cache-only mode**: `--cache-only` flag returns HF energy penalty for cache misses, enabling training on any GPU without CUDA-Q installed.
+- **Offline Pretraining**: `src/gqe/data/cache_to_pretrain.py` recovers 17,408 (operators, energy) pairs by replaying deterministic circuit generation. This allows **replay-buffer mixing** of known-good circuits without CUDA-Q.
+- **Cache-only mode**: `--cache-only` returns HF energy for cache misses (no CUDA-Q). Useful for buffer imitation, but **on-policy rollouts rarely hit the fixed cache** → flat rewards → DAPO advantage collapse. For real RL, use **write-through** (drop `--cache-only`) so misses are evaluated and stored. See `bash scripts/train_rl.sh full`.
 
 ### 6. Scaling to 40 Qubits: QSCI & FMO2
 
@@ -656,16 +656,21 @@ bash scripts/run_hpc_qbraid_workflow.sh --qpu-retrieve
 |---|---|
 | [`scripts/setup_env.sh`](scripts/setup_env.sh) | One-shot setup: git-lfs, pip deps, GPU verify (no sudo) |
 | [`scripts/env_gpu.sh`](scripts/env_gpu.sh) | Auto-detect GPU, set CUDA-Q gate fusion / mempool env vars |
-| [`scripts/train_rl.sh`](scripts/train_rl.sh) | Two-phase RL training (smoke / cache-warmup / online-rl / full) |
+| [`scripts/train_rl.sh`](scripts/train_rl.sh) | Write-through RL from SFT (`smoke` / `cache-warmup` / `online-rl` / `full`) |
 | [`scripts/evaluate_rl.sh`](scripts/evaluate_rl.sh) | Evaluation pipeline (infer / eval / optimize / report / all) |
 
 ```bash
 bash scripts/train_rl.sh smoke          # 2 epochs, 2 molecules (~2 min)
-bash scripts/train_rl.sh full           # cache-warmup → online-rl (~3h on H200)
+bash scripts/train_rl.sh full           # write-through RL from SFT (skips cache-only)
 bash scripts/evaluate_rl.sh all         # infer → eval → optimize → report
+# Optional: MAX_QUBITS_OVERRIDE=28 bash scripts/train_rl.sh full
 ```
 
-GPU auto-detection: `env_gpu.sh` reads compute capability and sets CUDA-Q gate fusion level (Hopper CC 9.0 → fusion 5, Blackwell CC 10.0 → +FP32 emulation, Ampere CC 8.0 → fusion 4). Molecule lists are auto-generated from the Hamiltonians JSON filtered by GPU-specific qubit limits.
+**`train_rl.sh` modes:** `full` / `online-rl` use **write-through** caching (CUDA-Q evaluates misses and stores them). Prefer these for real learning. `full` always starts from the SFT checkpoint (ignores any stale `*_rl_warmup.pt`). `cache-warmup` (`--cache-only`) is kept for buffer-imitation experiments only — on-policy samples almost never hit the precomputed MD5 keys, so misses get a flat HF penalty and DAPO/GRPO advantages collapse.
+
+GPU auto-detection: `env_gpu.sh` reads compute capability and sets CUDA-Q gate fusion level (Hopper CC 9.0 → fusion 5, Blackwell CC 10.0 → +FP32 emulation, Ampere CC 8.0 → fusion 4). Molecule lists are auto-generated from the Hamiltonians JSON filtered by GPU-specific qubit limits (`train_rl.sh` defaults to ≤22q on H200).
+
+**Import order note:** Triton (`torch.compile`) and CUDA-Q both embed LLVM. `train_rl_dapo.py` lazy-imports CUDA-Q **after** `torch.compile`. Do not `import cudaq` before compiling the model in the same process.
 
 ### B200 / Blackwell launcher (legacy)
 
@@ -685,7 +690,7 @@ bash scripts/launch_b200_training.sh both           # SFT → RL main pipeline
 bash scripts/launch_b200_training.sh cache
 ```
 
-Blackwell / B200 env knobs: [`scripts/env_b200_blackwell.sh`](scripts/env_b200_blackwell.sh) (source before `import cudaq`).
+Blackwell / B200 env knobs: [`scripts/env_b200_blackwell.sh`](scripts/env_b200_blackwell.sh) (source before `import cudaq`). GPU auto-env for H100/H200/etc.: [`scripts/env_gpu.sh`](scripts/env_gpu.sh).
 
 ---
 
@@ -818,7 +823,7 @@ flowchart LR
 | Stage | Hardware | What Happens | Script |
 |---|---|---|---|
 | **1. Precompute** | B200 GPU (qBraid) | Generate Hamiltonians, run H-cGQE inference, cache energies to SQLite | `scripts/launch_b200_training.sh` |
-| **2. Offline RL Training** | L40S GPU (HPC) | Train DAPO policy using cached energies — no CUDA-Q needed | `train_rl_dapo.py --energy-cache ... --cache-only` |
+| **2. Offline RL Training** | L40S GPU (HPC) | Buffer-imitation / cache lookups; prefer write-through on CUDA-Q GPUs for real RL | `train_rl_dapo.py --energy-cache ...` (± `--cache-only`) |
 | **3. QPU Validation** | Rigetti Cepheus (qBraid) | Execute QWC-grouped measurement circuits on 108q QPU | `scripts/phase3/generate_qpu_manifests.py` |
 
 ### Stage 1: Energy Cache Precompute (B200)
@@ -841,8 +846,8 @@ python src/gqe/models/train_rl_dapo.py \
 ```
 
 Key flags:
-- **`--energy-cache`**: Path to SQLite file from Stage 1. DedupCache loads precomputed energies.
-- **`--cache-only`**: Skips CUDA-Q entirely. Uncached circuits get HF penalty energy. Enables training on any GPU without CUDA-Q installed.
+- **`--energy-cache`**: Path to SQLite file from Stage 1. DedupCache / PersistentEnergyCache loads precomputed energies.
+- **`--cache-only`**: Skips CUDA-Q; uncached circuits get HF penalty. Prefer **without** `--cache-only` (write-through) when CUDA-Q is available so novel circuits get real energies. On qBraid: `bash scripts/train_rl.sh full`.
 
 ### Stage 3: FMO2 Reconstruction
 
@@ -880,7 +885,7 @@ Outputs per-molecule JSON manifests with QWC-grouped QASM 2.0 measurement circui
 | Component | File | Description |
 |---|---|---|
 | **DedupCache (SQLite)** | `src/gqe/rl/map_elites.py` | Persistent energy cache with `from_sqlite()` classmethod for offline loading |
-| **Offline RL Training** | `src/gqe/models/train_rl_dapo.py` | `--energy-cache` + `--cache-only` flags for GPU-only training |
+| **Offline / write-through RL** | `src/gqe/models/train_rl_dapo.py` | `--energy-cache`; omit `--cache-only` for write-through CUDA-Q misses |
 | **FMO2 Pipeline** | `src/gqe/eval/run_fmo2.py` | Fragment → GQE → reassemble with MAP-Elites archive integration |
 | **QPU Manifests** | `scripts/phase3/generate_qpu_manifests.py` | QWC grouping, QASM export, cost estimation for Rigetti Cepheus |
 | **Smoke Test** | `scripts/phase3/00_smoke_test.sh` | Single-command verification for judges |
