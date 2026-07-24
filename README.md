@@ -683,7 +683,13 @@ bash scripts/launch_b200_training.sh cache          # precompute energy cache (�
 bash scripts/launch_b200_training.sh both           # SFT → RL main pipeline
 ```
 
+<<<<<<< HEAD
 **Energy cache:** SQLite-backed circuit→energy store for fast RL. Default cap **`CACHE_MAX_QUBITS=28`**. Do not precompute 32–40q SV caches — use QSCI/FMO2 instead.
+=======
+**`train_rl.sh` modes:** `full` / `online-rl` use **write-through** caching (CUDA-Q evaluates misses and stores them). Prefer these for real learning. `full` always starts from the SFT checkpoint (ignores any stale `*_rl_warmup.pt`). `cache-warmup` (`--cache-only`) is kept for buffer-imitation experiments only — on-policy samples almost never hit the precomputed MD5 keys, so misses get a flat HF penalty and DAPO/GRPO advantages collapse.
+
+**Energy cache:** SQLite-backed circuit→energy store for fast RL. Default cap **`CACHE_MAX_QUBITS=28`**. Do not precompute 32–40q SV caches — use QSCI/FMO2 instead. `train_rl.sh` defaults to ≤22q on H200 (override with `MAX_QUBITS_OVERRIDE`).
+>>>>>>> 91b96fe (docs: note that train_rl.sh full always starts from SFT)
 
 ```bash
 # Optional: one-time cache fill (append-safe, skips existing keys)
