@@ -1,0 +1,405 @@
+{
+  "n_bins_e": 10,
+  "n_bins_d": 10,
+  "max_seq_len": 64,
+  "grid": {
+    "4_2": {
+      "operators": [
+        "IZIIIZII",
+        "XXYY",
+        "IIYZXZZZYZXI",
+        "IZZIIIII",
+        "XYYX",
+        "IIZZ",
+        "ZIII",
+        "IIIZ",
+        "ZIII",
+        "IIXZZYZXYIII",
+        "IIIXZZZXYZYIIIII",
+        "YZYI",
+        "IZZI",
+        "IIZI",
+        "YXIXYIII",
+        "IZIZ",
+        "IZIIIIIIIIII",
+        "ZIII",
+        "YYIIIIXX"
+      ],
+      "energy": -1.1167593073964255,
+      "features": {
+        "entanglement_density": 0.42105263157894735,
+        "circuit_depth": 0.296875,
+        "non_commuting_fraction": 0.36,
+        "operator_diversity": 0.8947368421052632
+      },
+      "metadata": {
+        "molecule": "h2",
+        "epoch": 0
+      }
+    },
+    "5_2": {
+      "operators": [
+        "IYYIYYIIIIIIII",
+        "IIIIIIIYZZZZXZZZXZZY",
+        "IIIXZZZZZZYZZZZXZZZY",
+        "ZZII",
+        "ZZII",
+        "XYYX",
+        "YYXX",
+        "IIZI",
+        "YYXX",
+        "XZYZZZZXZZYI",
+        "ZIII",
+        "IIIIZIIZ",
+        "IIIXZZZXIIIIIIIIIIIIII",
+        "IIZI",
+        "YXXY",
+        "IYZYIIIIIIIIII",
+        "IIIIIIIIIZZI",
+        "IZIZ",
+        "ZIZI"
+      ],
+      "energy": -1.1167593073964255,
+      "features": {
+        "entanglement_density": 0.5263157894736842,
+        "circuit_depth": 0.296875,
+        "non_commuting_fraction": 0.38,
+        "operator_diversity": 0.8421052631578947
+      },
+      "metadata": {
+        "molecule": "h2",
+        "epoch": 0
+      }
+    },
+    "5_3": {
+      "operators": [
+        "IIIIIIZZIIII",
+        "YZYI",
+        "IXYZZZYZZZXI",
+        "XXYY",
+        "XZXI",
+        "XXXX",
+        "XYXY",
+        "XXYY",
+        "XYYX",
+        "IIIIIIIXZZXZZZZZZYZY",
+        "IIIZ",
+        "IZIIIZIIIIII",
+        "ZIZI",
+        "ZIII",
+        "IZIZ",
+        "IIZZ",
+        "IIIIIIZIIIIIII",
+        "YXXY",
+        "ZIZI",
+        "IZIZ"
+      ],
+      "energy": -1.1167593073964255,
+      "features": {
+        "entanglement_density": 0.5,
+        "circuit_depth": 0.3125,
+        "non_commuting_fraction": 0.30000000000000004,
+        "operator_diversity": 0.85
+      },
+      "metadata": {
+        "molecule": "h2",
+        "epoch": 0
+      }
+    },
+    "6_3": {
+      "operators": [
+        "XXYY",
+        "IIIIIXYZZZZXYIII",
+        "ZIIZ",
+        "ZZII",
+        "ZZII",
+        "XYYX",
+        "YYXX",
+        "ZZII",
+        "XZZYZZZZZZZZZZZXZZYIII",
+        "YYXX",
+        "IIZI",
+        "YYXX",
+        "IIIIXYZZYZXI",
+        "IZZI",
+        "IIIIIIIIZZII",
+        "YZYI",
+        "XXYY",
+        "XYXY",
+        "XZXI",
+        "XXXX"
+      ],
+      "energy": -1.1167593073964255,
+      "features": {
+        "entanglement_density": 0.65,
+        "circuit_depth": 0.3125,
+        "non_commuting_fraction": 0.040000000000000036,
+        "operator_diversity": 0.75
+      },
+      "metadata": {
+        "molecule": "h2",
+        "epoch": 0
+      }
+    },
+    "3_2": {
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "ZZII",
+        "ZZII",
+        "XYYX",
+        "YYXX",
+        "ZZII",
+        "YYXX",
+        "IIZI",
+        "YYXX",
+        "IIZI",
+        "IIZI",
+        "YXXY",
+        "IIZI",
+        "IIZI",
+        "ZIII",
+        "YXZZYZXIIIIIIIIIIIIIII",
+        "IZZI"
+      ],
+      "energy": -1.1219823382608738,
+      "features": {
+        "entanglement_density": 0.3684210526315789,
+        "circuit_depth": 0.296875,
+        "non_commuting_fraction": 0.18000000000000005,
+        "operator_diversity": 0.5789473684210527
+      },
+      "metadata": {
+        "molecule": "h2",
+        "epoch": 1
+      }
+    },
+    "3_3": {
+      "operators": [
+        "YXXY",
+        "IIZZ",
+        "XXYY",
+        "IIIZIIII",
+        "IIIIIIIIZIIZ",
+        "YZYI",
+        "XXYY",
+        "IZZI",
+        "ZIII",
+        "IIZI",
+        "XYYX",
+        "IIZI",
+        "IXZZYZZZZZXY",
+        "IIZIIIIZ",
+        "IIZI",
+        "IZIZ",
+        "ZIZIIIII",
+        "ZIII",
+        "YXZZYZXIIIIIIIIIIIIIII",
+        "IIZZIIIIIIII"
+      ],
+      "energy": -1.1167593073964255,
+      "features": {
+        "entanglement_density": 0.35,
+        "circuit_depth": 0.3125,
+        "non_commuting_fraction": 0.28,
+        "operator_diversity": 0.8
+      },
+      "metadata": {
+        "molecule": "h2",
+        "epoch": 0
+      }
+    },
+    "6_2": {
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZIIIIIIIIII",
+        "IIXZZYZXYIII",
+        "IIXZZZZXXZZZZXII",
+        "IIYXZZYZZZXI",
+        "YZYI",
+        "XXYY",
+        "XYYX",
+        "YZZZXZZZZZYXII",
+        "XZZXXXIIIIII",
+        "YYXX",
+        "ZIII",
+        "IZIZ",
+        "IIZZ",
+        "IIIIIZZI",
+        "IIYXZZYZZZXI",
+        "XZXI",
+        "IZIIIIZIIIII"
+      ],
+      "energy": -1.1167593073964255,
+      "features": {
+        "entanglement_density": 0.631578947368421,
+        "circuit_depth": 0.296875,
+        "non_commuting_fraction": 0.26,
+        "operator_diversity": 0.8421052631578947
+      },
+      "metadata": {
+        "molecule": "h2",
+        "epoch": 0
+      }
+    },
+    "1_2": {
+      "operators": [
+        "YXXY",
+        "IIZZ",
+        "ZIIIIIIIIZIIII",
+        "ZIII",
+        "ZIII",
+        "ZIIIIIIZ",
+        "IZIZ",
+        "IIIIIIZIZIIIII",
+        "YYIYYIII",
+        "IZIZ",
+        "YYXX",
+        "ZIII",
+        "ZIZI",
+        "IIIIIIIIIIIZII",
+        "IZZI",
+        "IIZI",
+        "IZIZ",
+        "IIZI",
+        "IZIZ"
+      ],
+      "energy": -1.1167593073964255,
+      "features": {
+        "entanglement_density": 0.15789473684210525,
+        "circuit_depth": 0.296875,
+        "non_commuting_fraction": 0.21999999999999997,
+        "operator_diversity": 0.6842105263157895
+      },
+      "metadata": {
+        "molecule": "h2",
+        "epoch": 0
+      }
+    },
+    "2_2": {
+      "operators": [
+        "IIIYZZZYIIIIII",
+        "XYYX",
+        "IIIZ",
+        "IIZI",
+        "IZZI",
+        "ZIII",
+        "IIZZ",
+        "IIIZ",
+        "IIZI",
+        "ZIII",
+        "IIZZ",
+        "IIIZ",
+        "IIZI",
+        "IXZZZZZYZXZZZZYI",
+        "IZIZ",
+        "IZII",
+        "XYYX",
+        "IIZZ",
+        "XXYY"
+      ],
+      "energy": -1.1167593073964255,
+      "features": {
+        "entanglement_density": 0.2631578947368421,
+        "circuit_depth": 0.296875,
+        "non_commuting_fraction": 0.42000000000000004,
+        "operator_diversity": 0.5789473684210527
+      },
+      "metadata": {
+        "molecule": "h2",
+        "epoch": 0
+      }
+    },
+    "4_3": {
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "ZZII",
+        "ZZII",
+        "XYYX",
+        "IZIIIIIIIIIIII",
+        "ZIII",
+        "IIZI",
+        "YYXX",
+        "XYZZXZZZYIII",
+        "IIIXYZZZZZZZZZZYZZXI",
+        "IIIXZZZZZZZX",
+        "YXXY",
+        "IZIIIZIIIIII",
+        "IIZI",
+        "ZIII",
+        "IIZI",
+        "IIZI",
+        "IXZYZZYZZZXI"
+      ],
+      "energy": -1.1167593073964255,
+      "features": {
+        "entanglement_density": 0.4,
+        "circuit_depth": 0.3125,
+        "non_commuting_fraction": 0.36,
+        "operator_diversity": 0.75
+      },
+      "metadata": {
+        "molecule": "h2",
+        "epoch": 0
+      }
+    },
+    "2_3": {
+      "operators": [
+        "YXXY",
+        "IIIXZZZXYZYIIIII",
+        "IIZZ",
+        "IIYZYIIIIIIYZY",
+        "ZZIIIIIIIIII",
+        "ZIIIIIIIIIIIIIIZIIII",
+        "IZIZ",
+        "ZIII",
+        "IIZI",
+        "XXYY",
+        "XYYX",
+        "IIZI",
+        "IZZIIIIIIIII",
+        "IIIZ",
+        "IIZI",
+        "YYXX",
+        "IIZI",
+        "IZIZ",
+        "IIZI",
+        "IZIIZIII",
+        "ZIIIIIIIIIIIIZ"
+      ],
+      "energy": -1.1167593073964255,
+      "features": {
+        "entanglement_density": 0.2857142857142857,
+        "circuit_depth": 0.328125,
+        "non_commuting_fraction": 0.31999999999999995,
+        "operator_diversity": 0.7619047619047619
+      },
+      "metadata": {
+        "molecule": "h2",
+        "epoch": 1
+      }
+    }
+  },
+  "summary": {
+    "coverage": 0.11,
+    "n_elites": 11,
+    "total_cells": 100,
+    "best_energy": -1.1219823382608738,
+    "mean_energy": -1.1172341283841023,
+    "qd_score": 12.289575412225128,
+    "mean_entanglement": 0.4140123034859876,
+    "mean_depth": 0.3053977272727273,
+    "entanglement_range": [
+      0.15789473684210525,
+      0.65
+    ],
+    "depth_range": [
+      0.296875,
+      0.328125
+    ]
+  }
+}
