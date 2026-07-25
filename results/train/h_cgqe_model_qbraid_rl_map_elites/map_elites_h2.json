@@ -1,0 +1,397 @@
+{
+  "n_bins_e": 10,
+  "n_bins_d": 10,
+  "max_seq_len": 64,
+  "grid": {
+    "3_3": {
+      "operators": [
+        "ZIZI",
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "ZZII",
+        "IXXI",
+        "YYXX",
+        "ZZII",
+        "YXXY",
+        "YYXX",
+        "IIZI",
+        "IIZI",
+        "IIZI",
+        "ZIZI",
+        "ZIII",
+        "IZIZ",
+        "XYXY",
+        "ZIII",
+        "IIZZ",
+        "IZZI"
+      ],
+      "energy": -1.1167590570062216,
+      "features": {
+        "entanglement_density": 0.3,
+        "circuit_depth": 0.3125,
+        "non_commuting_fraction": 0.16000000000000003,
+        "operator_diversity": 0.65
+      },
+      "metadata": {
+        "source": "resample"
+      }
+    },
+    "3_2": {
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "ZZII",
+        "ZZII",
+        "XYYX",
+        "YYXX",
+        "ZZII",
+        "YYXX",
+        "IIZI",
+        "YYXX",
+        "IIZI",
+        "YXXY",
+        "IIZZ",
+        "ZIII",
+        "IZIZ",
+        "ZIII",
+        "IIZZ",
+        "IZZI"
+      ],
+      "energy": -1.1173331406155733,
+      "features": {
+        "entanglement_density": 0.3157894736842105,
+        "circuit_depth": 0.296875,
+        "non_commuting_fraction": 0.07999999999999996,
+        "operator_diversity": 0.5789473684210527
+      },
+      "metadata": {
+        "source": "resample"
+      }
+    },
+    "4_1": {
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "ZZII",
+        "ZZII",
+        "XYYX",
+        "YYXX",
+        "ZZII",
+        "YYXX",
+        "IIZI",
+        "YYXX"
+      ],
+      "energy": -1.1167913377003438,
+      "features": {
+        "entanglement_density": 0.45454545454545453,
+        "circuit_depth": 0.171875,
+        "non_commuting_fraction": 0.06000000000000005,
+        "operator_diversity": 0.6363636363636364
+      },
+      "metadata": {
+        "source": "resample"
+      }
+    },
+    "5_2": {
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "ZZII",
+        "ZZII",
+        "XYYX",
+        "YYXX",
+        "ZZII",
+        "YYXX",
+        "IXXI",
+        "IIZI",
+        "YZYI",
+        "IIZI",
+        "YXXY",
+        "IIZI",
+        "IZII",
+        "XYXY",
+        "XYXY",
+        "XXYY"
+      ],
+      "energy": -1.116912378068832,
+      "features": {
+        "entanglement_density": 0.5263157894736842,
+        "circuit_depth": 0.296875,
+        "non_commuting_fraction": 0.14,
+        "operator_diversity": 0.631578947368421
+      },
+      "metadata": {
+        "source": "resample"
+      }
+    },
+    "4_2": {
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "ZZII",
+        "XZXI",
+        "XXXX",
+        "XYXY",
+        "XZZX",
+        "YYXX",
+        "IIZI",
+        "YYXX",
+        "IIZI",
+        "YXXY",
+        "IIZZ",
+        "ZIII",
+        "IZIZ",
+        "ZIII",
+        "IIZZ",
+        "IZZI"
+      ],
+      "energy": -1.116696215818404,
+      "features": {
+        "entanglement_density": 0.42105263157894735,
+        "circuit_depth": 0.296875,
+        "non_commuting_fraction": 0.14,
+        "operator_diversity": 0.7368421052631579
+      },
+      "metadata": {
+        "source": "resample"
+      }
+    },
+    "5_1": {
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "ZZII",
+        "ZZII",
+        "XYYX",
+        "YZYI",
+        "YYXX",
+        "IIZI",
+        "YYXX"
+      ],
+      "energy": -1.1161234683221315,
+      "features": {
+        "entanglement_density": 0.5,
+        "circuit_depth": 0.15625,
+        "non_commuting_fraction": 0.1777777777777778,
+        "operator_diversity": 0.8
+      },
+      "metadata": {
+        "source": "resample"
+      }
+    },
+    "2_2": {
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "ZZII",
+        "ZZII",
+        "XYYX",
+        "YYXX",
+        "ZZII",
+        "ZIIZ",
+        "YYXX",
+        "IIZI",
+        "IIZI",
+        "IIZI",
+        "YXXY",
+        "IIZZ",
+        "ZIII",
+        "IIZZ",
+        "IZZI"
+      ],
+      "energy": -1.116962085387227,
+      "features": {
+        "entanglement_density": 0.2777777777777778,
+        "circuit_depth": 0.28125,
+        "non_commuting_fraction": 0.07999999999999996,
+        "operator_diversity": 0.6111111111111112
+      },
+      "metadata": {
+        "source": "resample"
+      }
+    },
+    "7_2": {
+      "operators": [
+        "ZZII",
+        "XYYX",
+        "YYXX",
+        "ZZII",
+        "IXXI",
+        "IIZI",
+        "YZYI",
+        "XXYY",
+        "XYXY",
+        "XXYY",
+        "XYYX",
+        "YYXX",
+        "YXXY",
+        "IIZZ",
+        "XXXX",
+        "XYXY",
+        "XXYY"
+      ],
+      "energy": -1.1164655102379046,
+      "features": {
+        "entanglement_density": 0.7647058823529411,
+        "circuit_depth": 0.265625,
+        "non_commuting_fraction": 0.14,
+        "operator_diversity": 0.6470588235294118
+      },
+      "metadata": {
+        "source": "resample"
+      }
+    },
+    "9_0": {
+      "operators": [
+        "XXYY"
+      ],
+      "energy": -1.116759306663044,
+      "features": {
+        "entanglement_density": 1.0,
+        "circuit_depth": 0.015625,
+        "non_commuting_fraction": 0.0,
+        "operator_diversity": 1.0
+      },
+      "metadata": {
+        "source": "resample"
+      }
+    },
+    "3_1": {
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "ZZII",
+        "XYYX",
+        "YYXX",
+        "IIIZ",
+        "IIZI",
+        "IIIZ",
+        "IIZI",
+        "YYXX"
+      ],
+      "energy": -1.1164182141397274,
+      "features": {
+        "entanglement_density": 0.36363636363636365,
+        "circuit_depth": 0.171875,
+        "non_commuting_fraction": 0.26,
+        "operator_diversity": 0.7272727272727273
+      },
+      "metadata": {
+        "source": "resample"
+      }
+    },
+    "6_2": {
+      "operators": [
+        "ZIIZ",
+        "XXYY",
+        "XZXI",
+        "XXXX",
+        "XYXY",
+        "XYXY",
+        "ZIIZ",
+        "XXYY",
+        "XYYX",
+        "IIIZ",
+        "IIZI",
+        "YYXX",
+        "ZZII"
+      ],
+      "energy": -1.116234265278094,
+      "features": {
+        "entanglement_density": 0.6153846153846154,
+        "circuit_depth": 0.203125,
+        "non_commuting_fraction": 0.26,
+        "operator_diversity": 0.7692307692307693
+      },
+      "metadata": {
+        "source": "resample"
+      }
+    },
+    "2_1": {
+      "operators": [
+        "ZIII",
+        "XYYX",
+        "IIZI",
+        "XYYX",
+        "IIZZ",
+        "ZIII",
+        "IIIZ",
+        "ZIII",
+        "IIZZ",
+        "ZIII",
+        "YYXX",
+        "IZZI"
+      ],
+      "energy": -1.1168184193622048,
+      "features": {
+        "entanglement_density": 0.25,
+        "circuit_depth": 0.1875,
+        "non_commuting_fraction": 0.30000000000000004,
+        "operator_diversity": 0.5833333333333334
+      },
+      "metadata": {
+        "source": "resample"
+      }
+    },
+    "4_3": {
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "ZZII",
+        "ZZII",
+        "XYYX",
+        "YYXX",
+        "ZZII",
+        "YYXX",
+        "IIZI",
+        "XZXI",
+        "XXXX",
+        "XYXY",
+        "YXXY",
+        "IIZZ",
+        "ZIII",
+        "IZIZ",
+        "ZIII",
+        "IIZZ",
+        "IZZI"
+      ],
+      "energy": -1.1168138132760927,
+      "features": {
+        "entanglement_density": 0.4,
+        "circuit_depth": 0.3125,
+        "non_commuting_fraction": 0.07999999999999996,
+        "operator_diversity": 0.7
+      },
+      "metadata": {
+        "source": "resample"
+      }
+    }
+  },
+  "summary": {
+    "coverage": 0.13,
+    "n_elites": 13,
+    "total_cells": 100,
+    "best_energy": -1.1173331406155733,
+    "mean_energy": -1.1166990162981385,
+    "qd_score": 14.5170872118758,
+    "mean_entanglement": 0.4760929221872303,
+    "mean_depth": 0.2283653846153846,
+    "entanglement_range": [
+      0.25,
+      1.0
+    ],
+    "depth_range": [
+      0.015625,
+      0.3125
+    ]
+  }
+}

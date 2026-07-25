@@ -1,0 +1,2128 @@
+{
+  "checkpoint": "results/train/h_cgqe_model_qbraid_rl.pt",
+  "n_samples": 64,
+  "theta": 0.01,
+  "elapsed_s": 125.00880432128906,
+  "checkpoint_best_energies": {
+    "h2": -1.13728382306907,
+    "h2_0.5": -1.0548103024131228,
+    "h2_1.0": -1.1006229344063956,
+    "h2_1.5": -0.9974757917249757,
+    "h2_2.0": -0.948583511902868,
+    "anisole_cas12": -337.685045446186,
+    "benzene_cas12": -227.88996890091914,
+    "diarylethene_frag_cas12": -656.9725820074697,
+    "hf": -98.56784808097039,
+    "imeph_cas12": -7187.008267840409,
+    "iodobenzene_cas12": -7078.155696333027,
+    "lih": -7.861377201035244,
+    "lih_1.2": -7.835225472509271,
+    "lih_2.0": -7.830905584636221,
+    "lih_3.0": -7.710104859017338,
+    "methyl_iodide_cas12": -6889.844561577724,
+    "ocresol_cas12": -337.57158347878203,
+    "phenol_cas12": -301.61226796965275,
+    "toluene_cas12": -266.4405841179216,
+    "beh2": -15.560710459645668,
+    "beh2_1.0": -15.454495804183367,
+    "beh2_1.6": -15.503009146779759,
+    "h2o": -74.9413754414211,
+    "h2o_1.0_631g_cas8": -75.97819337688045,
+    "n2_1.1_631g_cas8": -108.86646458010922,
+    "nh3": -55.4356918947956,
+    "ch4": -39.72061076965372,
+    "co": -111.22324738204983,
+    "n2": -107.49479210037369,
+    "n2_1.8": -107.00638689341925,
+    "n2_2.5": -106.6132969092169,
+    "lih_1.6_631g": -7.979072779802299
+  },
+  "archive_dir": "results/train/h_cgqe_model_qbraid_rl_map_elites",
+  "archive_summary": {
+    "n_molecules": 32,
+    "total_elites": 708,
+    "mean_coverage": 0.22125,
+    "per_molecule": {
+      "h2": {
+        "coverage": 0.13,
+        "n_elites": 13,
+        "total_cells": 100,
+        "best_energy": -1.1173331406155733,
+        "mean_energy": -1.1166990162981385,
+        "qd_score": 14.5170872118758,
+        "mean_entanglement": 0.4760929221872303,
+        "mean_depth": 0.2283653846153846,
+        "entanglement_range": [
+          0.25,
+          1.0
+        ],
+        "depth_range": [
+          0.015625,
+          0.3125
+        ]
+      },
+      "h2_0.5": {
+        "coverage": 0.14,
+        "n_elites": 14,
+        "total_cells": 100,
+        "best_energy": -1.0434643058625426,
+        "mean_energy": -1.0428805644563908,
+        "qd_score": 14.60032790238947,
+        "mean_entanglement": 0.422888948242774,
+        "mean_depth": 0.2109375,
+        "entanglement_range": [
+          0.25,
+          0.6666666666666666
+        ],
+        "depth_range": [
+          0.03125,
+          0.328125
+        ]
+      },
+      "h2_1.0": {
+        "coverage": 0.17,
+        "n_elites": 17,
+        "total_cells": 100,
+        "best_energy": -1.0665503431656427,
+        "mean_energy": -1.0659969757837553,
+        "qd_score": 18.12194858832384,
+        "mean_entanglement": 0.48645301257758006,
+        "mean_depth": 0.21415441176470587,
+        "entanglement_range": [
+          0.2631578947368421,
+          0.9
+        ],
+        "depth_range": [
+          0.03125,
+          0.328125
+        ]
+      },
+      "h2_1.5": {
+        "coverage": 0.17,
+        "n_elites": 17,
+        "total_cells": 100,
+        "best_energy": -0.9118283742793273,
+        "mean_energy": -0.9110733500310942,
+        "qd_score": 15.4882469505286,
+        "mean_entanglement": 0.4286872009190348,
+        "mean_depth": 0.21691176470588236,
+        "entanglement_range": [
+          0.15384615384615385,
+          0.9
+        ],
+        "depth_range": [
+          0.078125,
+          0.328125
+        ]
+      },
+      "h2_2.0": {
+        "coverage": 0.15,
+        "n_elites": 15,
+        "total_cells": 100,
+        "best_energy": -0.7846151922331912,
+        "mean_energy": -0.7840936865220086,
+        "qd_score": 11.76140529783013,
+        "mean_entanglement": 0.4408853238265003,
+        "mean_depth": 0.19375,
+        "entanglement_range": [
+          0.16666666666666666,
+          1.0
+        ],
+        "depth_range": [
+          0.015625,
+          0.3125
+        ]
+      },
+      "anisole_cas12": {
+        "coverage": 0.22,
+        "n_elites": 22,
+        "total_cells": 100,
+        "best_energy": -337.6848372462751,
+        "mean_energy": -337.6829996874179,
+        "qd_score": 7429.025993123195,
+        "mean_entanglement": 0.6279393858971511,
+        "mean_depth": 0.5490056818181818,
+        "entanglement_range": [
+          0.3968253968253968,
+          0.95
+        ],
+        "depth_range": [
+          0.109375,
+          0.984375
+        ]
+      },
+      "benzene_cas12": {
+        "coverage": 0.2,
+        "n_elites": 20,
+        "total_cells": 100,
+        "best_energy": -227.8891834150635,
+        "mean_energy": -227.8875533806507,
+        "qd_score": 4557.751067613013,
+        "mean_entanglement": 0.622455668388981,
+        "mean_depth": 0.50625,
+        "entanglement_range": [
+          0.35,
+          0.9047619047619048
+        ],
+        "depth_range": [
+          0.203125,
+          0.984375
+        ]
+      },
+      "diarylethene_frag_cas12": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -656.9725538249364,
+        "mean_energy": -656.9708392217041,
+        "qd_score": 15110.329302099195,
+        "mean_entanglement": 0.5894169708675108,
+        "mean_depth": 0.46603260869565216,
+        "entanglement_range": [
+          0.25,
+          0.9
+        ],
+        "depth_range": [
+          0.046875,
+          0.984375
+        ]
+      },
+      "hf": {
+        "coverage": 0.22,
+        "n_elites": 22,
+        "total_cells": 100,
+        "best_energy": -98.56681506514379,
+        "mean_energy": -98.51057940170284,
+        "qd_score": 2167.2327468374624,
+        "mean_entanglement": 0.5739571211749152,
+        "mean_depth": 0.5021306818181818,
+        "entanglement_range": [
+          0.2727272727272727,
+          0.9
+        ],
+        "depth_range": [
+          0.0625,
+          0.984375
+        ]
+      },
+      "imeph_cas12": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -7187.002075462224,
+        "mean_energy": -7186.999916937535,
+        "qd_score": 165300.9980895633,
+        "mean_entanglement": 0.6251202671944839,
+        "mean_depth": 0.5047554347826086,
+        "entanglement_range": [
+          0.1111111111111111,
+          0.9473684210526315
+        ],
+        "depth_range": [
+          0.28125,
+          0.984375
+        ]
+      },
+      "iodobenzene_cas12": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -7078.149053999885,
+        "mean_energy": -7078.147227259404,
+        "qd_score": 162797.38622696634,
+        "mean_entanglement": 0.6380551074142453,
+        "mean_depth": 0.5264945652173914,
+        "entanglement_range": [
+          0.4117647058823529,
+          1.0
+        ],
+        "depth_range": [
+          0.046875,
+          0.984375
+        ]
+      },
+      "lih": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -7.861313966674625,
+        "mean_energy": -7.854780799551634,
+        "qd_score": 180.65995838968757,
+        "mean_entanglement": 0.6175218104393609,
+        "mean_depth": 0.5020380434782609,
+        "entanglement_range": [
+          0.34285714285714286,
+          1.0
+        ],
+        "depth_range": [
+          0.078125,
+          0.984375
+        ]
+      },
+      "lih_1.2": {
+        "coverage": 0.25,
+        "n_elites": 25,
+        "total_cells": 100,
+        "best_energy": -7.834150035061619,
+        "mean_energy": -7.8269775913182205,
+        "qd_score": 195.67443978295552,
+        "mean_entanglement": 0.6106477363268868,
+        "mean_depth": 0.514375,
+        "entanglement_range": [
+          0.4117647058823529,
+          0.8571428571428571
+        ],
+        "depth_range": [
+          0.109375,
+          0.984375
+        ]
+      },
+      "lih_2.0": {
+        "coverage": 0.19,
+        "n_elites": 19,
+        "total_cells": 100,
+        "best_energy": -7.829690174383883,
+        "mean_energy": -7.822273562064719,
+        "qd_score": 148.62319767922966,
+        "mean_entanglement": 0.5810594725681892,
+        "mean_depth": 0.537828947368421,
+        "entanglement_range": [
+          0.40625,
+          0.85
+        ],
+        "depth_range": [
+          0.296875,
+          0.96875
+        ]
+      },
+      "lih_3.0": {
+        "coverage": 0.26,
+        "n_elites": 26,
+        "total_cells": 100,
+        "best_energy": -7.709420433519485,
+        "mean_energy": -7.704185466289293,
+        "qd_score": 200.30882212352162,
+        "mean_entanglement": 0.6265811960459795,
+        "mean_depth": 0.48497596153846156,
+        "entanglement_range": [
+          0.42105263157894735,
+          1.0
+        ],
+        "depth_range": [
+          0.125,
+          0.96875
+        ]
+      },
+      "methyl_iodide_cas12": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -6889.838736475615,
+        "mean_energy": -6889.835597049412,
+        "qd_score": 158466.21873213648,
+        "mean_entanglement": 0.5950314230279534,
+        "mean_depth": 0.5251358695652174,
+        "entanglement_range": [
+          0.2857142857142857,
+          0.95
+        ],
+        "depth_range": [
+          0.140625,
+          0.984375
+        ]
+      },
+      "ocresol_cas12": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -337.57132713387426,
+        "mean_energy": -337.5692718944598,
+        "qd_score": 7764.093253572576,
+        "mean_entanglement": 0.6342563556998452,
+        "mean_depth": 0.5264945652173914,
+        "entanglement_range": [
+          0.4,
+          1.0
+        ],
+        "depth_range": [
+          0.03125,
+          0.984375
+        ]
+      },
+      "phenol_cas12": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -301.6124670256942,
+        "mean_energy": -301.6101694266305,
+        "qd_score": 6937.033896812501,
+        "mean_entanglement": 0.6449208261096725,
+        "mean_depth": 0.4938858695652174,
+        "entanglement_range": [
+          0.3333333333333333,
+          1.0
+        ],
+        "depth_range": [
+          0.03125,
+          0.96875
+        ]
+      },
+      "toluene_cas12": {
+        "coverage": 0.27,
+        "n_elites": 27,
+        "total_cells": 100,
+        "best_energy": -266.44073801215853,
+        "mean_energy": -266.4379614604293,
+        "qd_score": 7193.82495943159,
+        "mean_entanglement": 0.6458185178511797,
+        "mean_depth": 0.5185185185185185,
+        "entanglement_range": [
+          0.25925925925925924,
+          1.0
+        ],
+        "depth_range": [
+          0.015625,
+          0.96875
+        ]
+      },
+      "beh2": {
+        "coverage": 0.26,
+        "n_elites": 26,
+        "total_cells": 100,
+        "best_energy": -15.5579385265799,
+        "mean_energy": -15.548015749629304,
+        "qd_score": 404.2484094903619,
+        "mean_entanglement": 0.6588789311123135,
+        "mean_depth": 0.49459134615384615,
+        "entanglement_range": [
+          0.36363636363636365,
+          1.0
+        ],
+        "depth_range": [
+          0.140625,
+          0.984375
+        ]
+      },
+      "beh2_1.0": {
+        "coverage": 0.22,
+        "n_elites": 22,
+        "total_cells": 100,
+        "best_energy": -15.452354641537848,
+        "mean_energy": -15.44278204679609,
+        "qd_score": 339.741205029514,
+        "mean_entanglement": 0.6350733830985678,
+        "mean_depth": 0.5681818181818182,
+        "entanglement_range": [
+          0.36538461538461536,
+          0.95
+        ],
+        "depth_range": [
+          0.28125,
+          0.984375
+        ]
+      },
+      "beh2_1.6": {
+        "coverage": 0.2,
+        "n_elites": 20,
+        "total_cells": 100,
+        "best_energy": -15.50252015597636,
+        "mean_energy": -15.496414936234071,
+        "qd_score": 309.9282987246814,
+        "mean_entanglement": 0.6216832938479059,
+        "mean_depth": 0.44375,
+        "entanglement_range": [
+          0.3333333333333333,
+          1.0
+        ],
+        "depth_range": [
+          0.078125,
+          0.984375
+        ]
+      },
+      "h2o": {
+        "coverage": 0.27,
+        "n_elites": 27,
+        "total_cells": 100,
+        "best_energy": -74.93649139218525,
+        "mean_energy": -74.89591323557933,
+        "qd_score": 2022.1896573606418,
+        "mean_entanglement": 0.583659744683442,
+        "mean_depth": 0.5381944444444444,
+        "entanglement_range": [
+          0.3333333333333333,
+          0.8421052631578947
+        ],
+        "depth_range": [
+          0.046875,
+          0.984375
+        ]
+      },
+      "h2o_1.0_631g_cas8": {
+        "coverage": 0.25,
+        "n_elites": 25,
+        "total_cells": 100,
+        "best_energy": -75.97791781663915,
+        "mean_energy": -75.9722690270788,
+        "qd_score": 1899.30672567697,
+        "mean_entanglement": 0.6505985161720739,
+        "mean_depth": 0.46375,
+        "entanglement_range": [
+          0.3333333333333333,
+          1.0
+        ],
+        "depth_range": [
+          0.078125,
+          0.984375
+        ]
+      },
+      "n2_1.1_631g_cas8": {
+        "coverage": 0.25,
+        "n_elites": 25,
+        "total_cells": 100,
+        "best_energy": -108.8671594028788,
+        "mean_energy": -108.86296227289516,
+        "qd_score": 2721.5740568223796,
+        "mean_entanglement": 0.6379924358622211,
+        "mean_depth": 0.509375,
+        "entanglement_range": [
+          0.37254901960784315,
+          0.95
+        ],
+        "depth_range": [
+          0.09375,
+          0.984375
+        ]
+      },
+      "nh3": {
+        "coverage": 0.27,
+        "n_elites": 27,
+        "total_cells": 100,
+        "best_energy": -55.43576102742402,
+        "mean_energy": -55.39894543221109,
+        "qd_score": 1495.7715266696998,
+        "mean_entanglement": 0.6144222812168594,
+        "mean_depth": 0.4878472222222222,
+        "entanglement_range": [
+          0.35,
+          1.0
+        ],
+        "depth_range": [
+          0.015625,
+          0.984375
+        ]
+      },
+      "ch4": {
+        "coverage": 0.21,
+        "n_elites": 21,
+        "total_cells": 100,
+        "best_energy": -39.7192312766544,
+        "mean_energy": -39.699432931564445,
+        "qd_score": 833.6880915628534,
+        "mean_entanglement": 0.5913392982811005,
+        "mean_depth": 0.5319940476190477,
+        "entanglement_range": [
+          0.35,
+          0.9545454545454546
+        ],
+        "depth_range": [
+          0.203125,
+          0.96875
+        ]
+      },
+      "co": {
+        "coverage": 0.22,
+        "n_elites": 22,
+        "total_cells": 100,
+        "best_energy": -111.20192725782333,
+        "mean_energy": -111.14826667023898,
+        "qd_score": 2445.2618667452575,
+        "mean_entanglement": 0.6071773066388597,
+        "mean_depth": 0.5866477272727273,
+        "entanglement_range": [
+          0.36507936507936506,
+          0.8947368421052632
+        ],
+        "depth_range": [
+          0.28125,
+          0.984375
+        ]
+      },
+      "n2": {
+        "coverage": 0.24,
+        "n_elites": 24,
+        "total_cells": 100,
+        "best_energy": -107.48486992276818,
+        "mean_energy": -107.44487260709661,
+        "qd_score": 2578.6769425703187,
+        "mean_entanglement": 0.6477330268429482,
+        "mean_depth": 0.4889322916666667,
+        "entanglement_range": [
+          0.42105263157894735,
+          1.0
+        ],
+        "depth_range": [
+          0.125,
+          0.953125
+        ]
+      },
+      "n2_1.8": {
+        "coverage": 0.24,
+        "n_elites": 24,
+        "total_cells": 100,
+        "best_energy": -107.00833911696832,
+        "mean_energy": -106.9586880017992,
+        "qd_score": 2567.008512043181,
+        "mean_entanglement": 0.6335760676811696,
+        "mean_depth": 0.4973958333333333,
+        "entanglement_range": [
+          0.3888888888888889,
+          0.9
+        ],
+        "depth_range": [
+          0.09375,
+          0.984375
+        ]
+      },
+      "n2_2.5": {
+        "coverage": 0.24,
+        "n_elites": 24,
+        "total_cells": 100,
+        "best_energy": -106.61389602668706,
+        "mean_energy": -106.56775998252323,
+        "qd_score": 2557.626239580558,
+        "mean_entanglement": 0.6615630548570474,
+        "mean_depth": 0.4869791666666667,
+        "entanglement_range": [
+          0.3,
+          1.0
+        ],
+        "depth_range": [
+          0.0625,
+          0.984375
+        ]
+      },
+      "lih_1.6_631g": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -7.9781092000111435,
+        "mean_energy": -7.9723988959574,
+        "qd_score": 183.36517460702018,
+        "mean_entanglement": 0.605777979453235,
+        "mean_depth": 0.5095108695652174,
+        "entanglement_range": [
+          0.25,
+          1.0
+        ],
+        "depth_range": [
+          0.078125,
+          0.984375
+        ]
+      }
+    }
+  },
+  "best_circuits": {
+    "h2": {
+      "n_qubits": 4,
+      "n_electrons": 2,
+      "energy": -1.1173331406155733,
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "ZZII",
+        "ZZII",
+        "XYYX",
+        "YYXX",
+        "ZZII",
+        "YYXX",
+        "IIZI",
+        "YYXX",
+        "IIZI",
+        "YXXY",
+        "IIZZ",
+        "ZIII",
+        "IZIZ",
+        "ZIII",
+        "IIZZ",
+        "IZZI"
+      ],
+      "n_ops": 19,
+      "checkpoint_best_energy": -1.13728382306907,
+      "energy_delta_vs_checkpoint": 0.019950682453496738,
+      "hf_energy": -1.1167593073964255,
+      "fci_energy": -1.1372838344885028,
+      "cache_stats": {
+        "hits": 6,
+        "misses": 58,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.13,
+        "n_elites": 13,
+        "total_cells": 100,
+        "best_energy": -1.1173331406155733,
+        "mean_energy": -1.1166990162981385,
+        "qd_score": 14.5170872118758,
+        "mean_entanglement": 0.4760929221872303,
+        "mean_depth": 0.2283653846153846,
+        "entanglement_range": [
+          0.25,
+          1.0
+        ],
+        "depth_range": [
+          0.015625,
+          0.3125
+        ]
+      }
+    },
+    "h2_0.5": {
+      "n_qubits": 4,
+      "n_electrons": 2,
+      "energy": -1.0434643058625426,
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "ZZII",
+        "ZZII",
+        "XYYX",
+        "ZIIZ",
+        "YYXX",
+        "IIZI",
+        "YYXX",
+        "IIZI",
+        "IIZI",
+        "IIZI",
+        "YXXY",
+        "XYXY",
+        "IZII",
+        "ZIII",
+        "IIZZ",
+        "IZZI"
+      ],
+      "n_ops": 19,
+      "checkpoint_best_energy": -1.0548103024131228,
+      "energy_delta_vs_checkpoint": 0.011345996550580217,
+      "hf_energy": -1.042996274540095,
+      "fci_energy": -1.0551597944706248,
+      "cache_stats": {
+        "hits": 9,
+        "misses": 55,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.14,
+        "n_elites": 14,
+        "total_cells": 100,
+        "best_energy": -1.0434643058625426,
+        "mean_energy": -1.0428805644563908,
+        "qd_score": 14.60032790238947,
+        "mean_entanglement": 0.422888948242774,
+        "mean_depth": 0.2109375,
+        "entanglement_range": [
+          0.25,
+          0.6666666666666666
+        ],
+        "depth_range": [
+          0.03125,
+          0.328125
+        ]
+      }
+    },
+    "h2_1.0": {
+      "n_qubits": 4,
+      "n_electrons": 2,
+      "energy": -1.0665503431656427,
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "ZZII",
+        "ZZII",
+        "XYYX",
+        "YYXX",
+        "ZZII",
+        "YYXX",
+        "IIZI",
+        "YYXX",
+        "IIZI",
+        "IIZI",
+        "YXXY",
+        "ZIZI",
+        "IZIZ",
+        "XYXY",
+        "ZIII",
+        "IIZZ",
+        "IZIZ"
+      ],
+      "n_ops": 20,
+      "checkpoint_best_energy": -1.1006229344063956,
+      "energy_delta_vs_checkpoint": 0.0340725912407529,
+      "hf_energy": -1.0661086493179366,
+      "fci_energy": -1.1011503302326187,
+      "cache_stats": {
+        "hits": 3,
+        "misses": 61,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.17,
+        "n_elites": 17,
+        "total_cells": 100,
+        "best_energy": -1.0665503431656427,
+        "mean_energy": -1.0659969757837553,
+        "qd_score": 18.12194858832384,
+        "mean_entanglement": 0.48645301257758006,
+        "mean_depth": 0.21415441176470587,
+        "entanglement_range": [
+          0.2631578947368421,
+          0.9
+        ],
+        "depth_range": [
+          0.03125,
+          0.328125
+        ]
+      }
+    },
+    "h2_1.5": {
+      "n_qubits": 4,
+      "n_electrons": 2,
+      "energy": -0.9118283742793273,
+      "operators": [
+        "XXYY",
+        "IZIZ",
+        "ZIIZ",
+        "YYXX",
+        "ZZII",
+        "XYYX",
+        "YYXX",
+        "ZZII",
+        "YYXX",
+        "IIZI",
+        "YYXX",
+        "IIZI",
+        "IIZI",
+        "YXXY",
+        "XXXX",
+        "XYXY",
+        "ZIZI",
+        "IZIZ",
+        "ZIZI"
+      ],
+      "n_ops": 19,
+      "checkpoint_best_energy": -0.9974757917249757,
+      "energy_delta_vs_checkpoint": 0.08564741744564841,
+      "hf_energy": -0.9108735545943865,
+      "fci_energy": -0.9981493534714101,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 63,
+        "skipped": 0
+      },
+      "n_valid_samples": 63,
+      "archive_summary": {
+        "coverage": 0.17,
+        "n_elites": 17,
+        "total_cells": 100,
+        "best_energy": -0.9118283742793273,
+        "mean_energy": -0.9110733500310942,
+        "qd_score": 15.4882469505286,
+        "mean_entanglement": 0.4286872009190348,
+        "mean_depth": 0.21691176470588236,
+        "entanglement_range": [
+          0.15384615384615385,
+          0.9
+        ],
+        "depth_range": [
+          0.078125,
+          0.328125
+        ]
+      }
+    },
+    "h2_2.0": {
+      "n_qubits": 4,
+      "n_electrons": 2,
+      "energy": -0.7846151922331912,
+      "operators": [
+        "XXYY",
+        "IIIZ",
+        "IIZI",
+        "YZYI",
+        "ZIII",
+        "IIZZ",
+        "ZIII",
+        "IZIZ",
+        "YYXX",
+        "ZZII",
+        "YYXX",
+        "IIZI",
+        "IZZI",
+        "IIZI",
+        "IIIZ",
+        "IIZI",
+        "IZII",
+        "XYYX",
+        "IIZZ",
+        "IZZI"
+      ],
+      "n_ops": 20,
+      "checkpoint_best_energy": -0.948583511902868,
+      "energy_delta_vs_checkpoint": 0.16396831966967684,
+      "hf_energy": -0.783792654277353,
+      "fci_energy": -0.9486411121761853,
+      "cache_stats": {
+        "hits": 4,
+        "misses": 59,
+        "skipped": 0
+      },
+      "n_valid_samples": 63,
+      "archive_summary": {
+        "coverage": 0.15,
+        "n_elites": 15,
+        "total_cells": 100,
+        "best_energy": -0.7846151922331912,
+        "mean_energy": -0.7840936865220086,
+        "qd_score": 11.76140529783013,
+        "mean_entanglement": 0.4408853238265003,
+        "mean_depth": 0.19375,
+        "entanglement_range": [
+          0.16666666666666666,
+          1.0
+        ],
+        "depth_range": [
+          0.015625,
+          0.3125
+        ]
+      }
+    },
+    "anisole_cas12": {
+      "n_qubits": 12,
+      "n_electrons": 6,
+      "energy": -337.6848372462751,
+      "operators": [
+        "IXYZZZZZZXZY",
+        "IIXXZZZXZZZX",
+        "IIIXZXZXZZZX",
+        "IIIIIIIIIZII",
+        "IIIYIYIIIIII",
+        "IIIZIIIIIIZI",
+        "IZIIIIIZIIII",
+        "IZIIIIIZ",
+        "XZZZXZYZYIII",
+        "IIIXXZZYZYII",
+        "IZIXZXII",
+        "IIIIIIIZIIZI",
+        "IZZIIIIIIIII",
+        "IZIIIIZIIIII",
+        "IIIIZIIIIIII",
+        "IIIZIIIIIIII",
+        "ZIIIIZIIIIII"
+      ],
+      "n_ops": 17,
+      "checkpoint_best_energy": -337.685045446186,
+      "energy_delta_vs_checkpoint": 0.00020819991090093026,
+      "hf_energy": -337.68512377730025,
+      "fci_energy": -337.70949463921784,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.22,
+        "n_elites": 22,
+        "total_cells": 100,
+        "best_energy": -337.6848372462751,
+        "mean_energy": -337.6829996874179,
+        "qd_score": 7429.025993123195,
+        "mean_entanglement": 0.6279393858971511,
+        "mean_depth": 0.5490056818181818,
+        "entanglement_range": [
+          0.3968253968253968,
+          0.95
+        ],
+        "depth_range": [
+          0.109375,
+          0.984375
+        ]
+      }
+    },
+    "benzene_cas12": {
+      "n_qubits": 12,
+      "n_electrons": 6,
+      "energy": -227.8891834150635,
+      "operators": [
+        "IXYZZZZZZXZY",
+        "IYXZZZYZZZXI",
+        "XZZXZZZZZYZY",
+        "ZIIZIIIIIIII",
+        "IZIIIIIIIZII",
+        "IXZZZYXZYIII",
+        "ZZIIIIII",
+        "IYYZZZZYZZZY",
+        "YZZYZZZZYZZY",
+        "IXZZZYXZYIII",
+        "IXZZYZZZZZXY",
+        "IYZXZZZXZZZY",
+        "XZZZXZYZYIII"
+      ],
+      "n_ops": 13,
+      "checkpoint_best_energy": -227.88996890091914,
+      "energy_delta_vs_checkpoint": 0.000785485855629986,
+      "hf_energy": -227.89010798052504,
+      "fci_energy": -227.94786860093672,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.2,
+        "n_elites": 20,
+        "total_cells": 100,
+        "best_energy": -227.8891834150635,
+        "mean_energy": -227.8875533806507,
+        "qd_score": 4557.751067613013,
+        "mean_entanglement": 0.622455668388981,
+        "mean_depth": 0.50625,
+        "entanglement_range": [
+          0.35,
+          0.9047619047619048
+        ],
+        "depth_range": [
+          0.203125,
+          0.984375
+        ]
+      }
+    },
+    "diarylethene_frag_cas12": {
+      "n_qubits": 12,
+      "n_electrons": 6,
+      "energy": -656.9725538249364,
+      "operators": [
+        "IXYZZZZZZXZY",
+        "ZZII",
+        "IIZIIIZI"
+      ],
+      "n_ops": 3,
+      "checkpoint_best_energy": -656.9725820074697,
+      "energy_delta_vs_checkpoint": 2.8182533242215868e-05,
+      "hf_energy": -656.9726179055835,
+      "fci_energy": -657.0324564083844,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -656.9725538249364,
+        "mean_energy": -656.9708392217041,
+        "qd_score": 15110.329302099195,
+        "mean_entanglement": 0.5894169708675108,
+        "mean_depth": 0.46603260869565216,
+        "entanglement_range": [
+          0.25,
+          0.9
+        ],
+        "depth_range": [
+          0.046875,
+          0.984375
+        ]
+      }
+    },
+    "hf": {
+      "n_qubits": 12,
+      "n_electrons": 10,
+      "energy": -98.56681506514379,
+      "operators": [
+        "IIXYYXII",
+        "ZIIIIIII",
+        "YZZYZZYZZZZY",
+        "IIIXZZZZZZZX"
+      ],
+      "n_ops": 4,
+      "checkpoint_best_energy": -98.56784808097039,
+      "energy_delta_vs_checkpoint": 0.0010330158266071976,
+      "hf_energy": -98.57077998601403,
+      "fci_energy": -98.59662417998742,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.22,
+        "n_elites": 22,
+        "total_cells": 100,
+        "best_energy": -98.56681506514379,
+        "mean_energy": -98.51057940170284,
+        "qd_score": 2167.2327468374624,
+        "mean_entanglement": 0.5739571211749152,
+        "mean_depth": 0.5021306818181818,
+        "entanglement_range": [
+          0.2727272727272727,
+          0.9
+        ],
+        "depth_range": [
+          0.0625,
+          0.984375
+        ]
+      }
+    },
+    "imeph_cas12": {
+      "n_qubits": 12,
+      "n_electrons": 6,
+      "energy": -7187.002075462224,
+      "operators": [
+        "IIXZYZZZZXYI",
+        "IIIIIZZIIIII",
+        "IZIIIIIIIIII",
+        "IZZIIIII",
+        "IXZYYZZZXIII",
+        "IIIIZIIIIIIZ",
+        "IIIIIIIZ",
+        "ZIIIIIIZIIII",
+        "ZIIZIIIIIIII",
+        "IZIIIIIIIZII",
+        "ZIIIIIIIZIII",
+        "IIIIIIIIZZII",
+        "ZIIIIIII",
+        "IIIIZIIIIIII",
+        "IIIIIIIIIIZI",
+        "ZIIIIIIIIZII",
+        "IIIZIIZI",
+        "IIZZIIIIIIII"
+      ],
+      "n_ops": 18,
+      "checkpoint_best_energy": -7187.008267840409,
+      "energy_delta_vs_checkpoint": 0.006192378185005509,
+      "hf_energy": -7187.002243593628,
+      "fci_energy": -7187.026980076353,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -7187.002075462224,
+        "mean_energy": -7186.999916937535,
+        "qd_score": 165300.9980895633,
+        "mean_entanglement": 0.6251202671944839,
+        "mean_depth": 0.5047554347826086,
+        "entanglement_range": [
+          0.1111111111111111,
+          0.9473684210526315
+        ],
+        "depth_range": [
+          0.28125,
+          0.984375
+        ]
+      }
+    },
+    "iodobenzene_cas12": {
+      "n_qubits": 12,
+      "n_electrons": 6,
+      "energy": -7078.149053999885,
+      "operators": [
+        "IXYZZZZZZXZY",
+        "IIXZZYZZZXYI",
+        "IYZZZYXXIIII"
+      ],
+      "n_ops": 3,
+      "checkpoint_best_energy": -7078.155696333027,
+      "energy_delta_vs_checkpoint": 0.006642333141826384,
+      "hf_energy": -7061.065571158855,
+      "fci_energy": -7061.103524430529,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -7078.149053999885,
+        "mean_energy": -7078.147227259404,
+        "qd_score": 162797.38622696634,
+        "mean_entanglement": 0.6380551074142453,
+        "mean_depth": 0.5264945652173914,
+        "entanglement_range": [
+          0.4117647058823529,
+          1.0
+        ],
+        "depth_range": [
+          0.046875,
+          0.984375
+        ]
+      }
+    },
+    "lih": {
+      "n_qubits": 12,
+      "n_electrons": 4,
+      "energy": -7.861313966674625,
+      "operators": [
+        "IXZYYZZZXIII",
+        "IXZYZZZZYXII",
+        "IIYXXYII",
+        "IIXXYYII",
+        "IIIXZXZXZZZX"
+      ],
+      "n_ops": 5,
+      "checkpoint_best_energy": -7.861377201035244,
+      "energy_delta_vs_checkpoint": 6.32343606188357e-05,
+      "hf_energy": -7.861864769808652,
+      "fci_energy": -7.882324378883502,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -7.861313966674625,
+        "mean_energy": -7.854780799551634,
+        "qd_score": 180.65995838968757,
+        "mean_entanglement": 0.6175218104393609,
+        "mean_depth": 0.5020380434782609,
+        "entanglement_range": [
+          0.34285714285714286,
+          1.0
+        ],
+        "depth_range": [
+          0.078125,
+          0.984375
+        ]
+      }
+    },
+    "lih_1.2": {
+      "n_qubits": 12,
+      "n_electrons": 4,
+      "energy": -7.834150035061619,
+      "operators": [
+        "IXZYYZZZXIII",
+        "XZZXXXIIIIII",
+        "IXZYZZYZZZXI",
+        "IIIIIIIIIZZI",
+        "IZIIZIII",
+        "IIYXXYII",
+        "IIIIIZZIIIII",
+        "IIIIIIIZIIZI",
+        "IZIIIIIIIZII",
+        "IIIXZXZZZZXX",
+        "IZZIIIIIIIII",
+        "IZIIIIZIIIII",
+        "IIZZIIIIIIII",
+        "IZZIIIII",
+        "ZIIIIIIIIIIZ",
+        "XZXZZZXZZZXI",
+        "YZZYZXZZZXII"
+      ],
+      "n_ops": 17,
+      "checkpoint_best_energy": -7.835225472509271,
+      "energy_delta_vs_checkpoint": 0.001075437447652483,
+      "hf_energy": -7.83561582555692,
+      "fci_energy": -7.852430853195922,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.25,
+        "n_elites": 25,
+        "total_cells": 100,
+        "best_energy": -7.834150035061619,
+        "mean_energy": -7.8269775913182205,
+        "qd_score": 195.67443978295552,
+        "mean_entanglement": 0.6106477363268868,
+        "mean_depth": 0.514375,
+        "entanglement_range": [
+          0.4117647058823529,
+          0.8571428571428571
+        ],
+        "depth_range": [
+          0.109375,
+          0.984375
+        ]
+      }
+    },
+    "lih_2.0": {
+      "n_qubits": 12,
+      "n_electrons": 4,
+      "energy": -7.829690174383883,
+      "operators": [
+        "IZIIIIIIZIII",
+        "XYIIIIYX",
+        "IZZIIIII",
+        "IIIIIZIZ",
+        "IIIYIYII",
+        "ZIIIIIIZ",
+        "IYXZZZYZZZXI",
+        "XZZXZZZZZYZY",
+        "IXZYZZXYIIII",
+        "IXZXZZYYIIII",
+        "IIIIIZIIIIZI",
+        "IIIIIZZIIIII",
+        "IIIIIIZI",
+        "IIIIZIII",
+        "IIIIIZII",
+        "IIZIIZII",
+        "IIIZIIIZ",
+        "IIXYYXII",
+        "IIYZYZXZZZZX",
+        "ZIIIZIII",
+        "IZXZXIII",
+        "IIIIIIZIIIZI"
+      ],
+      "n_ops": 22,
+      "checkpoint_best_energy": -7.830905584636221,
+      "energy_delta_vs_checkpoint": 0.0012154102523380672,
+      "hf_energy": -7.830905584637078,
+      "fci_energy": -7.861087772481499,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.19,
+        "n_elites": 19,
+        "total_cells": 100,
+        "best_energy": -7.829690174383883,
+        "mean_energy": -7.822273562064719,
+        "qd_score": 148.62319767922966,
+        "mean_entanglement": 0.5810594725681892,
+        "mean_depth": 0.537828947368421,
+        "entanglement_range": [
+          0.40625,
+          0.85
+        ],
+        "depth_range": [
+          0.296875,
+          0.96875
+        ]
+      }
+    },
+    "lih_3.0": {
+      "n_qubits": 12,
+      "n_electrons": 4,
+      "energy": -7.709420433519485,
+      "operators": [
+        "IXZYYZZZXIII",
+        "XZZXXXIIIIII",
+        "IXZYZZYZZZXI",
+        "YXZZZZYXIIII",
+        "IXYZZZYZZZXI",
+        "ZIIIIIIZIIII",
+        "IIZI",
+        "ZIIIIIZI"
+      ],
+      "n_ops": 8,
+      "checkpoint_best_energy": -7.710104859017338,
+      "energy_delta_vs_checkpoint": 0.0006844254978535247,
+      "hf_energy": -7.710829900217229,
+      "fci_energy": -7.798843159502411,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.26,
+        "n_elites": 26,
+        "total_cells": 100,
+        "best_energy": -7.709420433519485,
+        "mean_energy": -7.704185466289293,
+        "qd_score": 200.30882212352162,
+        "mean_entanglement": 0.6265811960459795,
+        "mean_depth": 0.48497596153846156,
+        "entanglement_range": [
+          0.42105263157894735,
+          1.0
+        ],
+        "depth_range": [
+          0.125,
+          0.96875
+        ]
+      }
+    },
+    "methyl_iodide_cas12": {
+      "n_qubits": 12,
+      "n_electrons": 6,
+      "energy": -6889.838736475615,
+      "operators": [
+        "IXYZZZZZZXZY",
+        "IZZI",
+        "IIZZIIII",
+        "IIXYIIYX",
+        "IIIIIIZZ",
+        "IIIIIZZI",
+        "ZIIIIIIZIIII",
+        "IIZIIIIIIZII",
+        "XZZXZZZZZYZY",
+        "IIXZZXIIIIII",
+        "ZZIIIIIIIIII",
+        "IIIZIIZIIIII",
+        "ZIIIIIIZIIII",
+        "XZZX",
+        "ZIIIIZII",
+        "ZIIIIIIIIIII",
+        "IIIZIIIIIIII",
+        "IZIIIIIIIZII",
+        "ZIIIIIIIZIII",
+        "IZIIIIZIIIII",
+        "YXZZZZYXIIII"
+      ],
+      "n_ops": 21,
+      "checkpoint_best_energy": -6889.844561577724,
+      "energy_delta_vs_checkpoint": 0.005825102108246938,
+      "hf_energy": -6889.839397058096,
+      "fci_energy": -6889.853479551035,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -6889.838736475615,
+        "mean_energy": -6889.835597049412,
+        "qd_score": 158466.21873213648,
+        "mean_entanglement": 0.5950314230279534,
+        "mean_depth": 0.5251358695652174,
+        "entanglement_range": [
+          0.2857142857142857,
+          0.95
+        ],
+        "depth_range": [
+          0.140625,
+          0.984375
+        ]
+      }
+    },
+    "ocresol_cas12": {
+      "n_qubits": 12,
+      "n_electrons": 6,
+      "energy": -337.57132713387426,
+      "operators": [
+        "XYYXIIII",
+        "IIIZIIZI"
+      ],
+      "n_ops": 2,
+      "checkpoint_best_energy": -337.57158347878203,
+      "energy_delta_vs_checkpoint": 0.0002563449077683799,
+      "hf_energy": -337.57161337555794,
+      "fci_energy": -337.5982294788453,
+      "cache_stats": {
+        "hits": 1,
+        "misses": 63,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -337.57132713387426,
+        "mean_energy": -337.5692718944598,
+        "qd_score": 7764.093253572576,
+        "mean_entanglement": 0.6342563556998452,
+        "mean_depth": 0.5264945652173914,
+        "entanglement_range": [
+          0.4,
+          1.0
+        ],
+        "depth_range": [
+          0.03125,
+          0.984375
+        ]
+      }
+    },
+    "phenol_cas12": {
+      "n_qubits": 12,
+      "n_electrons": 6,
+      "energy": -301.6124670256942,
+      "operators": [
+        "IXYZZZZZZXZY",
+        "IIXXZZZXZZZX"
+      ],
+      "n_ops": 2,
+      "checkpoint_best_energy": -301.61226796965275,
+      "energy_delta_vs_checkpoint": -0.00019905604142422817,
+      "hf_energy": -301.61261853352374,
+      "fci_energy": -301.6581690576164,
+      "cache_stats": {
+        "hits": 2,
+        "misses": 62,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -301.6124670256942,
+        "mean_energy": -301.6101694266305,
+        "qd_score": 6937.033896812501,
+        "mean_entanglement": 0.6449208261096725,
+        "mean_depth": 0.4938858695652174,
+        "entanglement_range": [
+          0.3333333333333333,
+          1.0
+        ],
+        "depth_range": [
+          0.03125,
+          0.96875
+        ]
+      }
+    },
+    "toluene_cas12": {
+      "n_qubits": 12,
+      "n_electrons": 6,
+      "energy": -266.44073801215853,
+      "operators": [
+        "IXYZZZZZZXZY"
+      ],
+      "n_ops": 1,
+      "checkpoint_best_energy": -266.4405841179216,
+      "energy_delta_vs_checkpoint": -0.00015389423691658521,
+      "hf_energy": -266.44081235517086,
+      "fci_energy": -266.4940953969434,
+      "cache_stats": {
+        "hits": 1,
+        "misses": 62,
+        "skipped": 0
+      },
+      "n_valid_samples": 63,
+      "archive_summary": {
+        "coverage": 0.27,
+        "n_elites": 27,
+        "total_cells": 100,
+        "best_energy": -266.44073801215853,
+        "mean_energy": -266.4379614604293,
+        "qd_score": 7193.82495943159,
+        "mean_entanglement": 0.6458185178511797,
+        "mean_depth": 0.5185185185185185,
+        "entanglement_range": [
+          0.25925925925925924,
+          1.0
+        ],
+        "depth_range": [
+          0.015625,
+          0.96875
+        ]
+      }
+    },
+    "beh2": {
+      "n_qubits": 14,
+      "n_electrons": 6,
+      "energy": -15.5579385265799,
+      "operators": [
+        "IIIXYZYZZXIIII",
+        "XZZZZZZZZXIIII",
+        "XZXZZZYZZZYIII",
+        "IIYZXZXZYIIIII",
+        "IIXZXZZZZZYZZY",
+        "XZZZYZYZXIIIII",
+        "IIIYZXZYXIIIII",
+        "IIIYXZZZZZYXII",
+        "IIYXZZXZZYII",
+        "IIIIZIIZ",
+        "YYXXIIII",
+        "ZIII",
+        "IIIIIIIIZIIZ"
+      ],
+      "n_ops": 13,
+      "checkpoint_best_energy": -15.560710459645668,
+      "energy_delta_vs_checkpoint": 0.00277193306576784,
+      "hf_energy": -15.561278032307992,
+      "fci_energy": -15.595047080934403,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.26,
+        "n_elites": 26,
+        "total_cells": 100,
+        "best_energy": -15.5579385265799,
+        "mean_energy": -15.548015749629304,
+        "qd_score": 404.2484094903619,
+        "mean_entanglement": 0.6588789311123135,
+        "mean_depth": 0.49459134615384615,
+        "entanglement_range": [
+          0.36363636363636365,
+          1.0
+        ],
+        "depth_range": [
+          0.140625,
+          0.984375
+        ]
+      }
+    },
+    "beh2_1.0": {
+      "n_qubits": 14,
+      "n_electrons": 6,
+      "energy": -15.452354641537848,
+      "operators": [
+        "IIIXYZYZZXIIII",
+        "XZZZZZZZZXIIII",
+        "XZXZZZYZZZYIII",
+        "IIYZXZXZYIIIII",
+        "IIXZXZZZZZYZZY",
+        "XZZZYZYZXIIIII",
+        "IIIYZXZYXIIIII",
+        "IIIYXZZZZZYXII",
+        "IIYZZYZYZYIIII",
+        "IIIYZZZYIIIIII",
+        "YZXZZZZZYZZZXI",
+        "YYXX",
+        "IIZIIZII",
+        "XXXX",
+        "IIIIIIZIZIIIII",
+        "IIYXZZXZZYII",
+        "IIIXZYXZZYII",
+        "IYZYIIIIIIIIII"
+      ],
+      "n_ops": 18,
+      "checkpoint_best_energy": -15.454495804183367,
+      "energy_delta_vs_checkpoint": 0.0021411626455183352,
+      "hf_energy": -15.45566777310281,
+      "fci_energy": -15.481741069507589,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.22,
+        "n_elites": 22,
+        "total_cells": 100,
+        "best_energy": -15.452354641537848,
+        "mean_energy": -15.44278204679609,
+        "qd_score": 339.741205029514,
+        "mean_entanglement": 0.6350733830985678,
+        "mean_depth": 0.5681818181818182,
+        "entanglement_range": [
+          0.36538461538461536,
+          0.95
+        ],
+        "depth_range": [
+          0.28125,
+          0.984375
+        ]
+      }
+    },
+    "beh2_1.6": {
+      "n_qubits": 14,
+      "n_electrons": 6,
+      "energy": -15.50252015597636,
+      "operators": [
+        "IXZYYZZZXIII",
+        "XZYZZZZXZZYI",
+        "IIIIZIII",
+        "IIIIZIIIIIIZ",
+        "IIIIIIZIIIIIII",
+        "IZIIZIIIIIIIII",
+        "IIIZIIII",
+        "IIIIIZIZ",
+        "IIIYIYIIIIII",
+        "IIIZIIIIIIZI",
+        "IIZZIIIIIIII",
+        "IXZXZZYYIIII"
+      ],
+      "n_ops": 12,
+      "checkpoint_best_energy": -15.503009146779759,
+      "energy_delta_vs_checkpoint": 0.0004889908033991475,
+      "hf_energy": -15.504085516670967,
+      "fci_energy": -15.554623690074317,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.2,
+        "n_elites": 20,
+        "total_cells": 100,
+        "best_energy": -15.50252015597636,
+        "mean_energy": -15.496414936234071,
+        "qd_score": 309.9282987246814,
+        "mean_entanglement": 0.6216832938479059,
+        "mean_depth": 0.44375,
+        "entanglement_range": [
+          0.3333333333333333,
+          1.0
+        ],
+        "depth_range": [
+          0.078125,
+          0.984375
+        ]
+      }
+    },
+    "h2o": {
+      "n_qubits": 14,
+      "n_electrons": 10,
+      "energy": -74.93649139218525,
+      "operators": [
+        "YYIYYIII",
+        "IIIIIIIIIIIZ",
+        "ZIZI"
+      ],
+      "n_ops": 3,
+      "checkpoint_best_energy": -74.9413754414211,
+      "energy_delta_vs_checkpoint": 0.004884049235855059,
+      "hf_energy": -74.94161124700919,
+      "fci_energy": -74.98966212608191,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.27,
+        "n_elites": 27,
+        "total_cells": 100,
+        "best_energy": -74.93649139218525,
+        "mean_energy": -74.89591323557933,
+        "qd_score": 2022.1896573606418,
+        "mean_entanglement": 0.583659744683442,
+        "mean_depth": 0.5381944444444444,
+        "entanglement_range": [
+          0.3333333333333333,
+          0.8421052631578947
+        ],
+        "depth_range": [
+          0.046875,
+          0.984375
+        ]
+      }
+    },
+    "h2o_1.0_631g_cas8": {
+      "n_qubits": 16,
+      "n_electrons": 8,
+      "energy": -75.97791781663915,
+      "operators": [
+        "XZYZZZZZZXYIIIII",
+        "IIIIXZYZXZZZYIII",
+        "IIXZZXZZZYYIIIII",
+        "IZXZXIII",
+        "IXZZZXZYZYIIII"
+      ],
+      "n_ops": 5,
+      "checkpoint_best_energy": -75.97819337688045,
+      "energy_delta_vs_checkpoint": 0.00027556024130603873,
+      "hf_energy": -75.97891626272612,
+      "fci_energy": -76.0229092314288,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.25,
+        "n_elites": 25,
+        "total_cells": 100,
+        "best_energy": -75.97791781663915,
+        "mean_energy": -75.9722690270788,
+        "qd_score": 1899.30672567697,
+        "mean_entanglement": 0.6505985161720739,
+        "mean_depth": 0.46375,
+        "entanglement_range": [
+          0.3333333333333333,
+          1.0
+        ],
+        "depth_range": [
+          0.078125,
+          0.984375
+        ]
+      }
+    },
+    "n2_1.1_631g_cas8": {
+      "n_qubits": 16,
+      "n_electrons": 8,
+      "energy": -108.8671594028788,
+      "operators": [
+        "XZYZZZZZZXYIIIII",
+        "IIIIXZYZXZZZYIII",
+        "IIXZZXZZZYYIIIII",
+        "ZIIIIZIIIIII",
+        "IZIIIIIIIIII",
+        "IXXI"
+      ],
+      "n_ops": 6,
+      "checkpoint_best_energy": -108.86646458010922,
+      "energy_delta_vs_checkpoint": -0.0006948227695744436,
+      "hf_energy": -108.86761837305816,
+      "fci_energy": -108.95757478277567,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.25,
+        "n_elites": 25,
+        "total_cells": 100,
+        "best_energy": -108.8671594028788,
+        "mean_energy": -108.86296227289516,
+        "qd_score": 2721.5740568223796,
+        "mean_entanglement": 0.6379924358622211,
+        "mean_depth": 0.509375,
+        "entanglement_range": [
+          0.37254901960784315,
+          0.95
+        ],
+        "depth_range": [
+          0.09375,
+          0.984375
+        ]
+      }
+    },
+    "nh3": {
+      "n_qubits": 16,
+      "n_electrons": 10,
+      "energy": -55.43576102742402,
+      "operators": [
+        "XZYZZZZZZXYIIIII"
+      ],
+      "n_ops": 1,
+      "checkpoint_best_energy": -55.4356918947956,
+      "energy_delta_vs_checkpoint": -6.913262841834467e-05,
+      "hf_energy": -55.43756442836716,
+      "fci_energy": -55.496232821082835,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.27,
+        "n_elites": 27,
+        "total_cells": 100,
+        "best_energy": -55.43576102742402,
+        "mean_energy": -55.39894543221109,
+        "qd_score": 1495.7715266696998,
+        "mean_entanglement": 0.6144222812168594,
+        "mean_depth": 0.4878472222222222,
+        "entanglement_range": [
+          0.35,
+          1.0
+        ],
+        "depth_range": [
+          0.015625,
+          0.984375
+        ]
+      }
+    },
+    "ch4": {
+      "n_qubits": 18,
+      "n_electrons": 10,
+      "energy": -39.7192312766544,
+      "operators": [
+        "IXZYYZZZXIII",
+        "XZZXXXIIIIII",
+        "IIZIIZII",
+        "IXZYZXZZZZZY",
+        "ZIIIZIIIIIII",
+        "IIIIIIIIIZII",
+        "IIIIXXYY",
+        "IIZIIIIIIZII",
+        "IIIIIIIZIIZI",
+        "YZZYZXZZZXII",
+        "IIIXZZZXYZYIIIII",
+        "IIXZZZZXXZZZZXII",
+        "IIYXZZZZYZXIIIII"
+      ],
+      "n_ops": 13,
+      "checkpoint_best_energy": -39.72061076965372,
+      "energy_delta_vs_checkpoint": 0.0013794929993196092,
+      "hf_energy": -39.72674653618971,
+      "fci_energy": -39.80591330165194,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.21,
+        "n_elites": 21,
+        "total_cells": 100,
+        "best_energy": -39.7192312766544,
+        "mean_energy": -39.699432931564445,
+        "qd_score": 833.6880915628534,
+        "mean_entanglement": 0.5913392982811005,
+        "mean_depth": 0.5319940476190477,
+        "entanglement_range": [
+          0.35,
+          0.9545454545454546
+        ],
+        "depth_range": [
+          0.203125,
+          0.96875
+        ]
+      }
+    },
+    "co": {
+      "n_qubits": 20,
+      "n_electrons": 14,
+      "energy": -111.20192725782333,
+      "operators": [
+        "XZYZZZZZZXYIIIII",
+        "IIIIXZYZXZZZYIII",
+        "IIXZZXZZZYYIIIII",
+        "XZZZZZXZYZZZZYII",
+        "IIZIIIZI",
+        "IIIIIIIXZZXZZZZZZYZY",
+        "YZZZXZZZZZYXII",
+        "IIYYZZXZXIIIII",
+        "IIZIIIIIIIIZ",
+        "IZXZXIII",
+        "IIYZXZXZYIIIII",
+        "IIXZXZZZZZYZZY",
+        "IIYZZYZYZYIIII",
+        "ZIIIIIIIZIIIII",
+        "IIIIIIIIIIIIZZ",
+        "IIYZYZXZZZZX",
+        "IIZIIIII",
+        "ZIIIIIIZIIII",
+        "ZIIIIIIIIZIIII"
+      ],
+      "n_ops": 19,
+      "checkpoint_best_energy": -111.22324738204983,
+      "energy_delta_vs_checkpoint": 0.021320124226505754,
+      "hf_energy": -111.22455869560905,
+      "fci_energy": -111.36332031516334,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.22,
+        "n_elites": 22,
+        "total_cells": 100,
+        "best_energy": -111.20192725782333,
+        "mean_energy": -111.14826667023898,
+        "qd_score": 2445.2618667452575,
+        "mean_entanglement": 0.6071773066388597,
+        "mean_depth": 0.5866477272727273,
+        "entanglement_range": [
+          0.36507936507936506,
+          0.8947368421052632
+        ],
+        "depth_range": [
+          0.28125,
+          0.984375
+        ]
+      }
+    },
+    "n2": {
+      "n_qubits": 20,
+      "n_electrons": 14,
+      "energy": -107.48486992276818,
+      "operators": [
+        "IIIIIIIYZZZZXZZZXZZY",
+        "XZZZZXZZZZZZZZYZZZZY",
+        "IIIXZZZZZZYZZZZXZZZY",
+        "IIIIIIIXZZXZZZZZZYZY",
+        "IIIIIIIIIIZZ",
+        "IXZYZZXYIIII",
+        "IIXZXZZZZZYY",
+        "IIXZYZZZZXYI"
+      ],
+      "n_ops": 8,
+      "checkpoint_best_energy": -107.49479210037369,
+      "energy_delta_vs_checkpoint": 0.00992217760550318,
+      "hf_energy": -107.49650051179778,
+      "fci_energy": -107.6541224475226,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.24,
+        "n_elites": 24,
+        "total_cells": 100,
+        "best_energy": -107.48486992276818,
+        "mean_energy": -107.44487260709661,
+        "qd_score": 2578.6769425703187,
+        "mean_entanglement": 0.6477330268429482,
+        "mean_depth": 0.4889322916666667,
+        "entanglement_range": [
+          0.42105263157894735,
+          1.0
+        ],
+        "depth_range": [
+          0.125,
+          0.953125
+        ]
+      }
+    },
+    "n2_1.8": {
+      "n_qubits": 20,
+      "n_electrons": 14,
+      "energy": -107.00833911696832,
+      "operators": [
+        "IIIIIIIYZZZZXZZZXZZY",
+        "XZZZZXZZZZZZZZYZZZZY",
+        "IIIXZZZZZZYZZZZXZZZY",
+        "XZZXXXIIIIII",
+        "IZIIIZII",
+        "IIYZXZXZYIIIII"
+      ],
+      "n_ops": 6,
+      "checkpoint_best_energy": -107.00638689341925,
+      "energy_delta_vs_checkpoint": -0.0019522235490683215,
+      "hf_energy": -107.01732690729933,
+      "fci_energy": -107.4834573505643,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.24,
+        "n_elites": 24,
+        "total_cells": 100,
+        "best_energy": -107.00833911696832,
+        "mean_energy": -106.9586880017992,
+        "qd_score": 2567.008512043181,
+        "mean_entanglement": 0.6335760676811696,
+        "mean_depth": 0.4973958333333333,
+        "entanglement_range": [
+          0.3888888888888889,
+          0.9
+        ],
+        "depth_range": [
+          0.09375,
+          0.984375
+        ]
+      }
+    },
+    "n2_2.5": {
+      "n_qubits": 20,
+      "n_electrons": 14,
+      "energy": -106.61389602668706,
+      "operators": [
+        "IIIIIIIYZZZZXZZZXZZY",
+        "XZZZZXZZZZZZZZYZZZZY",
+        "IIIXZZZZZZYZZZZXZZZY",
+        "IIIIIIIXZZXZZZZZZYZY",
+        "IIIIIIIIIIIIXXZZZXZX",
+        "IIIIIIIIXZZZZYZZXZYI",
+        "IIIIIIIIYZZXZZZYZXII",
+        "IIIIIIIYZYZZZZZZXZXI"
+      ],
+      "n_ops": 8,
+      "checkpoint_best_energy": -106.6132969092169,
+      "energy_delta_vs_checkpoint": -0.0005991174701591717,
+      "hf_energy": -106.616959082769,
+      "fci_energy": -107.44041576424125,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.24,
+        "n_elites": 24,
+        "total_cells": 100,
+        "best_energy": -106.61389602668706,
+        "mean_energy": -106.56775998252323,
+        "qd_score": 2557.626239580558,
+        "mean_entanglement": 0.6615630548570474,
+        "mean_depth": 0.4869791666666667,
+        "entanglement_range": [
+          0.3,
+          1.0
+        ],
+        "depth_range": [
+          0.0625,
+          0.984375
+        ]
+      }
+    },
+    "lih_1.6_631g": {
+      "n_qubits": 22,
+      "n_electrons": 4,
+      "energy": -7.9781092000111435,
+      "operators": [
+        "IIXYZZZZXZZZYIIIIIIIII",
+        "IXZXZZZYZZZZZZZZZZZZZY",
+        "IXZXZYZZZZZZZZZZZZZYII",
+        "XZZYZZZZZZZZZZZXZZYIII",
+        "YZYZXZZZZZZZZZZZZXIIII"
+      ],
+      "n_ops": 5,
+      "checkpoint_best_energy": -7.979072779802299,
+      "energy_delta_vs_checkpoint": 0.0009635797911551336,
+      "hf_energy": -7.979321565020139,
+      "fci_energy": null,
+      "cache_stats": {
+        "hits": 0,
+        "misses": 64,
+        "skipped": 0
+      },
+      "n_valid_samples": 64,
+      "archive_summary": {
+        "coverage": 0.23,
+        "n_elites": 23,
+        "total_cells": 100,
+        "best_energy": -7.9781092000111435,
+        "mean_energy": -7.9723988959574,
+        "qd_score": 183.36517460702018,
+        "mean_entanglement": 0.605777979453235,
+        "mean_depth": 0.5095108695652174,
+        "entanglement_range": [
+          0.25,
+          1.0
+        ],
+        "depth_range": [
+          0.078125,
+          0.984375
+        ]
+      }
+    }
+  }
+}
