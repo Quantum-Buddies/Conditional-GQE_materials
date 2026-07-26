@@ -11,6 +11,14 @@ dataset:
       multiplicity: 1
       split: "train"
 
+    - name: "h2_0.74"
+      geometry:
+        - ["H", [0.0, 0.0, 0.0]]
+        - ["H", [0.0, 0.0, 0.74]]
+      charge: 0
+      multiplicity: 1
+      split: "train"
+
     - name: "h2_0.5"
       geometry:
         - ["H", [0.0, 0.0, 0.0]]
@@ -44,6 +52,18 @@ dataset:
       split: "val"
 
     - name: "lih"
+      geometry:
+        - ["Li", [0.0, 0.0, 0.0]]
+        - ["H", [0.0, 0.0, 1.6]]
+      charge: 0
+      multiplicity: 1
+      split: "train"
+      active_space:
+        mode: "explicit"
+        n_active_electrons: 2
+        n_active_orbitals: 4
+
+    - name: "lih_1.6"
       geometry:
         - ["Li", [0.0, 0.0, 0.0]]
         - ["H", [0.0, 0.0, 1.6]]

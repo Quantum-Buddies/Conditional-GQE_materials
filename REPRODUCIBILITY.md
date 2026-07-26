@@ -187,7 +187,7 @@ python scripts/retrieve_and_sqd.py \
     --out results/qpu/cepheus_rl_sqd_results.json
 ```
 
-**Credit budget:** ~600 remaining. Each molecule costs ~50 credits (4096 shots). Can run ~12 molecules.
+**Credit budget:** ~1,925 remaining. Cost per molecule: 30 credits/task + 0.0425 credits/shot. At 8192 shots = ~378 credits/molecule (~5 more possible). At 4096 shots = ~204 credits/molecule (~9 more possible).
 **Expected:** Best QPU error 13.9 mHa (methyl iodide). Particle-number preservation 8–71%.
 
 ### Stage 7: Report Generation

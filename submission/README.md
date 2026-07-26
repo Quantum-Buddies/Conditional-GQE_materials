@@ -277,7 +277,7 @@ Conditional-GQE_materials/
 
 6. **CUDA-Q + PyTorch:** Importing CUDA-Q before PyTorch's `torch.compile` causes LLVM symbol conflicts. Always import torch first, then cudaq.
 
-7. **qBraid Credits:** Total budget was 13,400 credits; ~12,800 used across 12 QPU submissions (8192 shots each) on Rigetti Cepheus-1-108Q. ~600 credits remaining.
+7. **qBraid Credits:** ~1,925 credits remaining. 12 QPU submissions completed (8192 shots each, ~4,538 credits spent) on Rigetti Cepheus-1-108Q via AWS Braket (30 credits/task + 0.0425 credits/shot). Each new molecule at 8192 shots costs ~378 credits; at 4096 shots costs ~204 credits.
 
 8. **Classical/VQE Baselines:** Hartree-Fock (HF), hardware-efficient VQE (HEA-VQE), ADAPT-VQE, and CCSD/CCSD(T) results are included in `results/phase3_final/classical_baseline_comparison.json` and `results/baselines/`. See `REPRODUCIBILITY.md` for the full comparison table.
 

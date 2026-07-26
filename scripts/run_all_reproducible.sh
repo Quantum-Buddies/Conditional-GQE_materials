@@ -19,7 +19,7 @@
 #   figures   — Generate all report figures + docx
 #   report    — Generate final .docx report
 #
-# Credit budget: ~600 qBraid credits remaining (QPU stage only)
+# Credit budget: ~1,925 qBraid credits remaining (QPU stage only)
 # GPU stages are free on qBraid or local hardware.
 # =============================================================================
 set -euo pipefail
@@ -167,9 +167,9 @@ run_qpu() {
         --molecules h2 lih beh2 methyl_iodide iodobenzene \
         --export-only
 
-    log "Submitting to Rigetti Cepheus (uses ~50 credits/molecule)..."
-    echo "  Estimated cost: 5 molecules × ~50 credits = ~250 credits"
-    echo "  Remaining after: ~350 credits"
+    log "Submitting to Rigetti Cepheus (AWS Braket: 30 credits/task + 0.0425 credits/shot)..."
+    echo "  At 8192 shots: ~378 credits/molecule (~5 molecules possible)"
+    echo "  At 4096 shots: ~204 credits/molecule (~9 molecules possible)"
     read -p "  Proceed with QPU submission? [y/N] " confirm
     if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
         python scripts/submit_sqd_to_cepheus.py \

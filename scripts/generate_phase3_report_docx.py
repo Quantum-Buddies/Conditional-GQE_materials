@@ -269,14 +269,14 @@ def build_document() -> None:
     rows = [
         ["H2 (0.74 Å)", "4", "20.5", "606511", "0.0002", "20.4", "0.15"],
         ["H2 (1.0 Å)", "4", "35.0", "—", "—", "35.0", "0.00"],
-        ["LiH (1.6 Å)", "8", "20.5", "1822901", "0.0001", "1.8", "1.85"],
-        ["CH3I", "8", "—", "987.8", "—", "2.6", "0.63"],
-        ["Iodobenzene", "8", "252.0", "626.4", "—", "2.0", "2.97"],
-        ["BeH2", "14", "202.1", "2181723", "—", "33.8", "34.8"],
-        ["N2 (1.1 Å)", "12", "—", "—", "—", "126.6", "126.8"],
+        ["LiH (1.6 Å)", "8", "1.8", "1822901", "0.0001", "1.8", "1.85"],
+        ["CH3I", "8", "1.0", "987.8", "—", "4.7", "1.59"],
+        ["Iodobenzene", "8", "3.1", "626.4", "—", "2.0", "2.97"],
+        ["BeH2", "14", "33.8", "2181723", "—", "33.8", "34.8"],
+        ["N2 (1.1 Å)", "12", "126.6", "—", "—", "126.6", "126.8"],
     ]
     add_table(doc, headers, rows)
-    add_para(doc, "Table 1: Classical and quantum baseline comparison (energy error vs FCI in mHa). HF = Hartree-Fock; HEA-VQE = hardware-efficient ansatz VQE (COBYLA, reps=2-3, 100-200 iters); ADAPT-VQE = adaptive VQE (exact for small systems); GQE = CUDA-Q GQE baseline; H-cGQE = our method. ADAPT-VQE achieves near-exact results on H2/LiH but does not scale. HEA-VQE converges poorly due to barren plateaus. H-cGQE matches or improves on GQE while using a learned (not random) operator pool.", italic=True, size=9)
+    add_para(doc, "Table 1: Classical and quantum baseline comparison (energy error vs FCI in mHa). HF = Hartree-Fock (PySCF, STO-3G); HEA-VQE = hardware-efficient ansatz VQE (COBYLA, reps=2-3, 100-200 iters); ADAPT-VQE = adaptive VQE (exact for small systems); GQE = CUDA-Q GQE baseline; H-cGQE = our method. ADAPT-VQE achieves near-exact results on H2/LiH but does not scale. HEA-VQE converges poorly due to barren plateaus. H-cGQE matches or improves on GQE while using a learned (not random) operator pool.", italic=True, size=9)
 
     add_para(doc, "Figure 4. Classical and quantum baselines vs H-cGQE", bold="")
     add_image(doc, FIG_DIR / "fig_classical_vs_quantum.png",
