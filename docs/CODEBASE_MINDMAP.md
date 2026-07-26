@@ -161,7 +161,7 @@ mindmap
 
 | File | Purpose / Responsibility | Key Functions / Classes | Status |
 | :--- | :--- | :--- | :--- |
-| `cudaq_tuning.py` | Configures CUDA-Q environment variables (`CUDAQ_ENABLE_MEMPOOL`, gate fusion, L40S presets). | `apply_cudaq_env`, `apply_for_l40s` | **Active Acceleration** |
+| `cudaq_tuning.py` | Configures CUDA-Q environment variables (`CUDAQ_ENABLE_MEMPOOL`, gate fusion, L40S & B200 presets). | `apply_cudaq_env`, `apply_for_l40s`, `apply_for_b200` | **Active Acceleration** |
 | `fast_pauli.py` | Vectorized Pauli operator math using 2-bit integer encodings ($(0,0)=I, (1,0)=X, (1,1)=Y, (0,1)=Z$). | `pauli_to_masks`, `are_qwc`, `qwc_compatibility_matrix` | **Active Acceleration** |
 | `fast_qwc.py` | Vectorized $O(1)$ Qubit-Wise Commutativity (QWC) term grouping on CPU/GPU. | `group_qwc_terms_vectorized`, `_qwc_compat_matrix_gpu` | **Active Acceleration** |
 | `gpu_parity.py` | GPU-accelerated bitwise popcount parity calculation for parsing QWC measurement counts. | `parse_grouped_results_gpu`, `_parse_counts_triton` | **Active Acceleration** |
@@ -179,9 +179,10 @@ results/
 │   ├── hamiltonians_merged.json           # 21 SFT/scaling molecules (4–40q)
 │   └── hamiltonians_40plus.json/          # 10 XL scaling molecules (Benzene 40q, N2 40q)
 ├── train/
-│   ├── h_cgqe_model_b200_sft.pt           # SFT warm-start checkpoint
-│   ├── h_cgqe_model_b200_rl_main.pt       # DAPO RL model (35 GIC molecules)
-│   ├── h_cgqe_model_b200_rl_40q.pt        # Extended DAPO RL model (40q)
+│   ├── h_cgqe_model_b200_sft.pt           # SFT warm-start checkpoint (31 MB)
+│   ├── h_cgqe_model_b200_rl_main.pt       # DAPO RL model (35 GIC molecules, 40 MB)
+│   ├── h_cgqe_model_b200_rl_40q.pt        # Extended DAPO RL model (40q, 40 MB)
+│   ├── h_cgqe_model_b200_rl_scratch.pt    # Ablation: direct RL from scratch (40 MB)
 │   ├── rl_energy_cache.sqlite             # SQLite persistent circuit -> energy database
 │   └── *_metrics.json                     # Training logs and reward history
 ├── eval/
@@ -196,3 +197,13 @@ results/
     ├── consolidated_phase3_results.json   # Full benchmark suite results
     └── benchmark_ch3i_consolidated.json   # Methyl iodide QPU benchmark
 ```
+
+### B200/Blackwell Scripts (`scripts/`)
+
+| Script | Purpose |
+|---|---|
+| `launch_b200_training.sh` | Unified B200 launcher: SFT → RL → RL-40q, cache, ablation |
+| `run_b200_training.sh` | Portable single-B200 training launcher (env-var configurable) |
+| `env_b200_blackwell.sh` | Blackwell env vars: cuBLAS BF16x9, CUDA-Q FP32 emulation, PyTorch TF32 |
+| `run_40q_scaling_pipeline.sh` | End-to-end 4q→40q scaling pipeline on B200 (SV + MPS + QPU) |
+| `precompute_rl_energy_cache.py` | Async B200 cache generator for SQLite energy cache |

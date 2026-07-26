@@ -254,6 +254,58 @@ bash scripts/run_qbraid_scaling.sh --stage raft --instance gpu-h200
 bash scripts/run_qbraid_scaling.sh --stage validate
 ```
 
+### B200 Training Results
+
+**SFT Warm-Start (B200, 500 epochs, BF16):**
+- Model: 7.79M params, vocab 317, d_model=256, 4+4 layers
+- Best validation loss: 1.037
+- Final validation accuracy: **96.2%**
+- Converged after ~200 epochs with early stopping (patience=60)
+
+**DAPO RL Smoke Test (qBraid H200, SFT checkpoint, 2 epochs):**
+- H2 best energy: -1.1220 Ha (vs FCI -1.1173 Ha)
+- LiH best energy: -7.8619 Ha
+- Dynamic sampling skipped 2/4 batches (identical energies)
+- Mean entropy: 3.30 (healthy exploration)
+- Replay buffer: 1,136 entries
+
+**Ablation: Direct RL from Scratch (B200, 2 epochs smoke):**
+- H2 best energy: -1.1165 Ha (0.8 mHa from FCI)
+- LiH best energy: 0.0 Ha (policy collapsed — no valid circuits found)
+- Confirms SFT warm-start is necessary for larger molecules
+
+### Blackwell Environment Setup
+
+Before training on B200, source the Blackwell environment:
+
+```bash
+source scripts/env_b200_blackwell.sh
+```
+
+This sets cuBLAS BF16x9 FP32 emulation, CUDA-Q FP32 emulation + gate fusion + mempool, and PyTorch TF32 overrides. See [B200_TRAINING_PLAN.md](B200_TRAINING_PLAN.md) for full details.
+
+**Critical import order**: `torch.compile` first → `cudaq` import second. Reversing causes LLVM SIGABRT (exit 134). Fixed via lazy `_ensure_cudaq()` in `train_rl_dapo.py`.
+
+### B200 Launcher
+
+```bash
+bash scripts/launch_b200_training.sh both        # SFT → RL → RL-40q
+bash scripts/launch_b200_training.sh sft         # SFT only
+bash scripts/launch_b200_training.sh rl          # RL only (needs SFT checkpoint)
+bash scripts/launch_b200_training.sh cache       # Precompute energy cache
+bash scripts/launch_b200_training.sh ablation    # Direct RL from scratch
+```
+
+### Checkpoints
+
+| File | Description |
+|---|---|
+| `results/train/h_cgqe_model_b200_sft.pt` | SFT warm-start (31 MB) |
+| `results/train/h_cgqe_model_b200_rl_main.pt` | DAPO RL on 35 GIC molecules (40 MB) |
+| `results/train/h_cgqe_model_b200_rl_40q.pt` | DAPO RL extended to 40q (40 MB) |
+| `results/train/h_cgqe_model_b200_rl_scratch.pt` | Ablation: scratch RL (40 MB) |
+| `results/train/rl_energy_cache.sqlite` | Persistent circuit→energy cache |
+
 ### Credit Budget (11,000 credits)
 
 | Scenario | Instance | Duration | Credits | Remaining |

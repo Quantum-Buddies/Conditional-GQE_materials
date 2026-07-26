@@ -8,7 +8,7 @@
 
 ## Launch on qBraid
 
-[![Launch on qBraid](https://qbraid-static.s3.us-east-2.amazonaws.com/launch-on-qbraid.svg)](https://github.com/qBraid/community/discussions/3)
+[![Launch on qBraid](https://qbraid-static.s3.us-east-2.amazonaws.com/launch-on-qbraid.svg)](https://account.qbraid.com?gitHubUrl=https://github.com/Quantum-Buddies/Conditional_GQE.git)
 
 Click the button above to launch this project on qBraid's quantum computing platform.
 
@@ -35,6 +35,9 @@ Training uses supervised fine-tuning followed by DAPO reinforcement learning wit
 | QSCI Scaling | Max qubits | **40 qubits** (benzene CAS(20e,20o)) |
 | IQM Emerald QPU | State fidelity | **87.5%** |
 | FMO2 Iodobenzene | Solver error | 26.25 mHa |
+| Classical: HF vs H-cGQE (H2) | Error reduction | 20.5 mHa → 0.15 mHa |
+| VQE: HEA-VQE vs H-cGQE (CH3I) | Error reduction | 987.8 mHa → 0.63 mHa |
+| VQE: ADAPT-VQE vs H-cGQE (H2) | Comparable | 0.0002 mHa vs 0.15 mHa |
 
 ---
 
@@ -190,7 +193,7 @@ python scripts/retrieve_and_sqd.py \
 ### 5. QSCI Scaling
 
 ```bash
-python src/gqe/eval/run_qsci_scaling.py \
+python src/gqe/eval/qsci.py \
     --hamiltonians results/data/hamiltonians_gic2026/hamiltonians.json \
     --backend nvidia \
     --max-qubits 40 \
@@ -274,7 +277,9 @@ Conditional-GQE_materials/
 
 6. **CUDA-Q + PyTorch:** Importing CUDA-Q before PyTorch's `torch.compile` causes LLVM symbol conflicts. Always import torch first, then cudaq.
 
-7. **qBraid Credits:** Total budget was 13,400 credits; ~12,800 used across 12 QPU submissions (8192 shots each) on Rigetti Cepheus-1-108Q.
+7. **qBraid Credits:** Total budget was 13,400 credits; ~12,800 used across 12 QPU submissions (8192 shots each) on Rigetti Cepheus-1-108Q. ~600 credits remaining.
+
+8. **Classical/VQE Baselines:** Hartree-Fock (HF), hardware-efficient VQE (HEA-VQE), ADAPT-VQE, and CCSD/CCSD(T) results are included in `results/phase3_final/classical_baseline_comparison.json` and `results/baselines/`. See `REPRODUCIBILITY.md` for the full comparison table.
 
 ---
 
@@ -288,8 +293,15 @@ All results can be reproduced by running the scripts in the order listed above. 
 - `results/eval/h_cgqe_rl_optimized.json` — RL-optimized circuit energies
 - `results/qpu/cepheus_sqd_energies.json` — Corrected Cepheus QPU SQD energies (12 molecules, bit-ordering fix applied)
 - `results/phase3_final/consolidated_results_gic2026.json` — Consolidated benchmark + QPU results with EUV photoresist metadata
+- `results/phase3_final/classical_baseline_comparison.json` — HF, HEA-VQE, ADAPT-VQE, GQE, H-cGQE comparison
+- `results/baselines/cudaq_vqe.json` — HEA-VQE baseline on 5 molecules
+- `results/baselines/adapt_vqe_h2.json` — ADAPT-VQE baseline on H2/LiH
+- `results/baselines/exact_diagonalization.json` — FCI reference energies
+- `results/data/fragments/ccsd_refs.json` — CCSD/CCSD(T) for FMO2 fragments
 - `results/qpu/cepheus_*_counts.json` — Raw QPU bitstring counts per molecule
 - `results/phase3_final/fmo/` — FMO2 exact and H-cGQE results
 - `results/phase3_final/qpu/qpu_validation_consolidated.json` — QPU validation summary
+- `results/phase3_final/figures/` — All report figures as PNG
+- `proposals/Ryoushi_Quantum_Buddies_Phase3_Report.docx` — Editable Word report
 
 Platform: GB200 + qBraid QPU access (Rigetti Cepheus, IQM Emerald).

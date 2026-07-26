@@ -265,11 +265,19 @@ Memory formula: `2^n qubits × 16 bytes (complex128) = VRAM needed`
 
 | Mode | Qubits | Backend | GPU | VRAM Needed | Notes |
 |------|--------|---------|-----|-------------|-------|
-| SV | 4-24 | `nvidia` / `nvidia-mqpu` | L40S | 256MB-256MB | Current capability |
-| SV | 4-30 | `nvidia` | H200 | up to 16GB | qBraid H200 |
-| SV | 4-32 | `nvidia` | B200 | up to 64GB | qBraid B200 |
-| SV | 4-36 | `nvidia-mqpu` | B200x4 | up to 1TB (distributed) | qBraid B200x4 |
+| SV | 4-24 | `nvidia` / `nvidia-mqpu` | L40S | 256MB-256MB | AIRE cluster (PCIe IPC limit) |
+| SV | 4-30 | `nvidia` | H200 | up to 16GB | qBraid H200 (best cost/perf) |
+| SV | 4-32 | `nvidia` | B200 | up to 64GB | qBraid B200 (primary training platform) |
+| SV | 4-36 | `nvidia-mqpu` | B200x4 | up to 1TB (distributed) | qBraid B200x4 (NVLink distribution) |
 | MPS | 24-40 | `tensornet-mps` | any GPU | depends on χ | Approximate, report χ |
+
+**Primary training platform: B200 (Blackwell)**
+- SFT warm-start: 96.2% val accuracy, 7.79M params, 500 epochs BF16
+- DAPO RL: curriculum learning, force-entanglement, adaptive temperature
+- NVFP4 optional via Transformer Engine (1.59× throughput, 4× memory savings)
+- Blackwell env: `source scripts/env_b200_blackwell.sh` (cuBLAS BF16x9, CUDA-Q FP32 emulation)
+- Launcher: `bash scripts/launch_b200_training.sh both` (SFT → RL → RL-40q)
+- See [B200_TRAINING_PLAN.md](B200_TRAINING_PLAN.md) for full details
 
 ---
 
