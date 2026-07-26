@@ -7,10 +7,9 @@ This script:
 3. Evaluates H-cGQE generated circuits with tensornet
 4. Reports qubit counts, timings, and energy errors
 
-Usage (on AIRE GPU node):
-    ssh gpu013
-    cd /scratch/kcwp264/Conditional-GQE_materials
-    /mnt/scratch/kcwp264/.conda_envs/cudaq-env/bin/python scripts/run_scaling_tensornet.py
+Usage:
+    cd <project_root>
+    python scripts/run_scaling_tensornet.py
 """
 
 import json
@@ -19,8 +18,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path("/scratch/kcwp264/Conditional-GQE_materials")
-PYTHON = "/mnt/scratch/kcwp264/.conda_envs/cudaq-env/bin/python"
+ROOT = Path(__file__).resolve().parent.parent
+PYTHON = sys.executable
 CONFIG = ROOT / "configs" / "experiment_scaling.yaml"
 HAM_DIR = ROOT / "results" / "data"
 HAM_PATH = HAM_DIR / "hamiltonians_scaling.json"

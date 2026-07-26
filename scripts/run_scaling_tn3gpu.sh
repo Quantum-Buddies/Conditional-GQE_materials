@@ -11,11 +11,18 @@
 # Make sure no system MPI module is loaded (module purge) to avoid library conflicts.
 set -e
 
-export PY=/mnt/scratch/kcwp264/.conda_envs/cudaq-env/bin/python
-cd /scratch/kcwp264/Conditional-GQE_materials
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${ROOT}"
 
-# CUDA-Q MPI plugin (rebuilt via activate_custom_mpi.sh against conda's CUDA-aware Open MPI)
-export CUDAQ_MPI_COMM_LIB=/mnt/scratch/kcwp264/.conda_envs/cudaq-env/lib/python3.11/site-packages/distributed_interfaces/libcudaq_distributed_interface_mpi.so
+PYTHON="${PYTHON:-python}"
+export PY="${PYTHON}"
+
+# CUDA-Q MPI plugin path (auto-detect from conda env or CUDA-Q installation)
+_CUDAQ_MPI_PLUGIN=$(python -c "import os, cudaq; print(os.path.join(os.path.dirname(cudaq.__file__), '..', 'distributed_interfaces', 'libcudaq_distributed_interface_mpi.so'))" 2>/dev/null || echo "")
+if [ -n "${_CUDAQ_MPI_PLUGIN}" ] && [ -f "${_CUDAQ_MPI_PLUGIN}" ]; then
+    export CUDAQ_MPI_COMM_LIB="${_CUDAQ_MPI_PLUGIN}"
+fi
 # Enable logging for debugging
 export CUDAQ_LOG_LEVEL=info
 

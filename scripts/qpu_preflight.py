@@ -26,14 +26,35 @@ sys.path.insert(0, str(ROOT))
 from src.gqe.common.run_manifest import create_run_manifest, save_run_manifest
 
 
-# Known pricing (credits) — update from qBraid dashboard as needed
+# Known pricing (credits) — confirmed from qBraid docs and AWS Braket listing (July 2026)
+# Ref: https://docs.qbraid.com/v2/sdk/user-guide/providers/native/rigetti
+# Ref: https://docs.aws.amazon.com/braket/latest/developerguide/braket-devices.html
 KNOWN_PRICING = {
+    # Rigetti via AWS Braket (per-task + per-shot)
     "aws:rigetti:qpu:cepheus-1-108q": {"per_task": 30, "per_shot": 0.0425, "max_qubits": 108},
+    "aws:rigetti:qpu:ankaa-3": {"per_task": 30, "per_shot": 0.0425, "max_qubits": 84},
+    # Rigetti direct (per-minute, no gate-level delay on Braket path)
+    "rigetti:rigetti:qpu:cepheus-1-108q": {"per_minute": 12000.0, "max_qubits": 108},
+    # IonQ via AWS Braket
+    "aws:ionq:qpu:forte-1": {"per_task": 30, "per_shot": 8.0, "max_qubits": 30},
+    "aws:ionq:qpu:forte-enterprise-1": {"per_task": 30, "per_shot": 8.0, "max_qubits": 36},
+    "aws:ionq:qpu:aria-1": {"per_task": 30, "per_shot": 3.0, "max_qubits": 25},
+    "aws:ionq:qpu:aria-2": {"per_task": 30, "per_shot": 3.0, "max_qubits": 25},
+    # IonQ direct via qBraid
+    "ionq:ionq:qpu.forte-1": {"per_task": 30, "per_shot": 8.0, "max_qubits": 30},
+    "ionq:ionq:qpu.aria-1": {"per_task": 30, "per_shot": 3.0, "max_qubits": 25},
+    # IQM via AWS Braket
     "aws:iqm:qpu:garnet": {"per_task": 30, "per_shot": 0.145, "max_qubits": 20},
     "aws:iqm:qpu:emerald": {"per_task": 30, "per_shot": 0.16, "max_qubits": 54},
-    "ionq:ionq:qpu.aria-1": {"per_task": 30, "per_shot": 3.0, "max_qubits": 25},
-    "ionq:ionq:qpu.forte-1": {"per_task": 30, "per_shot": 8.0, "max_qubits": 30},
+    # AQT via AWS Braket
     "aqt:aqt:qpu.ibex_q1": {"per_task": 30, "per_shot": 2.35, "max_qubits": 24},
+    # QuEra via AWS Braket (analog Hamiltonian simulation)
+    "aws:quera:qpu:aquila": {"per_task": 30, "per_shot": 0.01, "max_qubits": 256},
+    # AWS Simulators (free first min/task, then per-shot)
+    "aws:aws:sim:sv1": {"per_task": 0, "per_shot": 0, "max_qubits": 34, "free_first_min": True},
+    "aws:aws:sim:dm1": {"per_task": 0, "per_shot": 0, "max_qubits": 17, "free_first_min": True},
+    "aws:aws:sim:tn1": {"per_task": 0, "per_shot": 0, "max_qubits": 50, "free_first_min": True},
+    # qBraid QIR Simulator
     "qbraid:qbraid:sim:qir-sv": {"per_task": 0, "per_shot": 0, "max_qubits": 30},
 }
 

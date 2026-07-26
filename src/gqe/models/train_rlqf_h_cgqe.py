@@ -34,6 +34,7 @@ from src.gqe.common.hamiltonian_utils import (
     hamiltonian_to_spin_operator,
     get_active_electron_count,
 )
+from src.gqe.common.ensure_checkpoint import ensure_checkpoint
 from src.gqe.models.h_cgqe_transformer import (
     HcGQEModel,
     tokenize_hamiltonian,
@@ -240,8 +241,9 @@ def main() -> None:
         except RuntimeError:
             print("Warning: Could not set CUDA-Q target, using default")
 
-    # Load checkpoint
-    ckpt = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
+    # Load checkpoint (auto-download from Hugging Face if missing)
+    ckpt_path = ensure_checkpoint(args.checkpoint)
+    ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     vocab = ckpt["vocab"]
     inv_vocab = ckpt["inv_vocab"]
     config = ckpt["config"]

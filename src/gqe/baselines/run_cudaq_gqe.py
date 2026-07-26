@@ -97,19 +97,18 @@ def _ensure_cudaq_available() -> None:
 def _ensure_cuda_context() -> None:
     """Create a CUDA context on the GPU assigned to this MPI rank.
 
-    Open MPI's smcuda BTL needs each rank to have a CUDA context before
-    MPI_Init() so it can set up GPU-buffer communication. Without this,
-    it falls back to TCP which cannot handle device pointers.
+    Uses PyTorch (always available) instead of ctypes to initialize CUDA.
+    Safe no-op if no GPU or PyTorch unavailable.
     """
-    import ctypes
     import os
-
-    local_rank = int(os.environ.get("OMPI_COMM_WORLD_LOCAL_RANK", 0))
-    libcudart = ctypes.CDLL("/mnt/scratch/kcwp264/.conda_envs/cudaq-env/lib/libcudart.so")
-    libcudart.cudaSetDevice(local_rank)
-    d = ctypes.c_void_p()
-    libcudart.cudaMalloc(ctypes.byref(d), 4)
-    libcudart.cudaFree(d)
+    try:
+        import torch
+        local_rank = int(os.environ.get("OMPI_COMM_WORLD_LOCAL_RANK", 0))
+        if torch.cuda.is_available():
+            torch.cuda.set_device(local_rank)
+            _ = torch.zeros(1, device=f"cuda:{local_rank}")
+    except Exception:
+        pass
 
 
 def _configure_target(preferred: str, option: str | None = None) -> str:

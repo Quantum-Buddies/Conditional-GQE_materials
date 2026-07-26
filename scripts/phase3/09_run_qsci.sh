@@ -5,11 +5,12 @@
 
 set -euo pipefail
 
-PYTHON=${PYTHON:-/mnt/scratch/kcwp264/.conda_envs/cudaq-env/bin/python}
-PROJECT_ROOT=${PROJECT_ROOT:-/scratch/kcwp264/Conditional-GQE_materials}
-export PYTHONPATH="${PROJECT_ROOT}:${PYTHONPATH:-}"
-
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${PROJECT_ROOT}"
+
+PYTHON="${PYTHON:-python}"
+export PYTHONPATH="${PROJECT_ROOT}:${PYTHONPATH:-}"
 
 # Hamiltonian data with 40+ qubit molecules
 HAM_FILE="results/data/hamiltonians_40plus.json/hamiltonians.json"

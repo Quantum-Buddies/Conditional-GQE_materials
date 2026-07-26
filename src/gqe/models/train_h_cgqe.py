@@ -27,6 +27,7 @@ from tqdm.auto import tqdm
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from src.gqe.models.h_cgqe_transformer import HcGQEModel, SPECIAL_TOKENS
+from src.gqe.common.ensure_checkpoint import ensure_checkpoint
 
 
 def _pauli_word_from_token_id(token_id: int, inv_vocab: dict[int, str]) -> str | None:
@@ -454,7 +455,7 @@ def main() -> None:
 
     # Load dataset
     print(f"Loading dataset from {args.dataset}")
-    dataset = torch.load(args.dataset, map_location="cpu", weights_only=False)
+    dataset = torch.load(ensure_checkpoint(args.dataset), map_location="cpu", weights_only=False)
     vocab = dataset["vocab"]
     vocab_size = len(vocab)
     metadata = dataset["metadata"]

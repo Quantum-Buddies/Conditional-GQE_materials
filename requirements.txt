@@ -12,6 +12,17 @@ qiskit>=2.0
 qiskit-algorithms>=0.4
 qiskit-nature>=0.7
 
+# Model checkpoint downloads from Hugging Face
+huggingface_hub>=0.24
+
+# PDF generation
+fpdf>=2.8
+
+# QPU access via qBraid
+qbraid-sdk>=0.9
+
 # RL training (QD-GRPO + MAP-Elites)
 # For NVFP4 on B200/Blackwell, install separately:
 #   pip install --no-build-isolation transformer_engine[pytorch]
+# CUDA-Q is pre-installed on qBraid; for local install:
+#   pip install cudaq

@@ -20,10 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 RESULTS_DIR="${PROJECT_ROOT}/results"
 
-PYTHON="/scratch/kcwp264/.conda_envs/cudaq-env/bin/python"
-if [ ! -f "${PYTHON}" ]; then
-    PYTHON="${CONDA_PREFIX:-/usr}/bin/python"
-fi
+PYTHON="${PYTHON:-python}"
 
 # Defaults
 ROUNDS=3

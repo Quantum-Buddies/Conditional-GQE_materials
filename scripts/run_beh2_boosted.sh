@@ -3,8 +3,9 @@
 # BeH2 showed lowest diversity (0.19) in Chemeleon2 results
 set -eo pipefail
 
-PROJECT_ROOT="/scratch/kcwp264/Conditional-GQE_materials"
-PYTHON="/mnt/scratch/kcwp264/.conda_envs/cudaq-env/bin/python"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PYTHON="${PYTHON:-python}"
 export CUDAQ_MPS_MAX_BOND=64
 
 cd "${PROJECT_ROOT}"

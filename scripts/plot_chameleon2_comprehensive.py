@@ -323,7 +323,8 @@ def plot_summary_table(stage2: dict, diversity: dict, metrics: list, output_dir:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--project-root", type=str, default="/scratch/kcwp264/Conditional-GQE_materials")
+    default_root = str(Path(__file__).resolve().parent.parent)
+    parser.add_argument("--project-root", type=str, default=default_root)
     parser.add_argument("--output-dir", type=str, default=None)
     args = parser.parse_args()
 

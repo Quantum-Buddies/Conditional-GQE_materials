@@ -3,9 +3,12 @@
 # Usage: bash scripts/phase3/05_run_mps.sh
 set -e
 
-export PY=${PY:-/mnt/scratch/kcwp264/.conda_envs/cudaq-env/bin/python}
-export LD_LIBRARY_PATH=/mnt/scratch/kcwp264/.conda_envs/cudaq-env/lib:$LD_LIBRARY_PATH
-cd /scratch/kcwp264/Conditional-GQE_materials
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+cd "${ROOT}"
+
+PYTHON="${PYTHON:-python}"
+export PY="${PYTHON}"
 
 OUT_DIR=results/phase3_final/mps
 mkdir -p "$OUT_DIR"

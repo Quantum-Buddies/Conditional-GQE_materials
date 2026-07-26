@@ -177,11 +177,12 @@ def print_summary(metrics: list[dict[str, Any]], final_buffer_size: int):
 
 def main():
     parser = argparse.ArgumentParser(description='Plot Chemeleon2 RL training results')
-    parser.add_argument('--metrics', type=str, 
-                        default='/scratch/kcwp264/Conditional-GQE_materials/results/train/h_cgqe_rl_chemeleon2_1gpu_rl_metrics.json',
+    project_root = Path(__file__).resolve().parent.parent
+    parser.add_argument('--metrics', type=str,
+                        default=str(project_root / 'results' / 'train' / 'h_cgqe_rl_chemeleon2_1gpu_rl_metrics.json'),
                         help='Path to metrics JSON file')
     parser.add_argument('--output-dir', type=str,
-                        default='/scratch/kcwp264/Conditional-GQE_materials/results/plots',
+                        default=str(project_root / 'results' / 'plots'),
                         help='Output directory for plots')
     args = parser.parse_args()
     

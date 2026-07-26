@@ -28,10 +28,14 @@ try:
     from ..data.graph_dataset import HamiltonianGraphDataset, collate_graph_samples
     from .chemistry_encoder import ChemistryEncoder
     from .train_chemistry_encoder import FlatChemistryRegressor
+    from ..common.ensure_checkpoint import ensure_checkpoint
 except ImportError:
     from data.graph_dataset import HamiltonianGraphDataset, collate_graph_samples
     from models.chemistry_encoder import ChemistryEncoder
     from models.train_chemistry_encoder import FlatChemistryRegressor
+
+    def ensure_checkpoint(p, **kw):
+        return Path(p)
 
 
 def main() -> None:
@@ -47,7 +51,7 @@ def main() -> None:
 
     device = torch.device(args.device)
 
-    ckpt = torch.load(args.checkpoint, map_location=device, weights_only=False)
+    ckpt = torch.load(ensure_checkpoint(args.checkpoint), map_location=device, weights_only=False)
     config = ckpt["config"]
     mode = config.get("mode", "graph")
 

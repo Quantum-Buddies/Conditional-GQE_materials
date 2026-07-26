@@ -66,6 +66,7 @@ from src.gqe.common.hamiltonian_utils import (
     find_record_by_name,
     get_active_electron_count,
 )
+from src.gqe.common.ensure_checkpoint import ensure_checkpoint
 from src.gqe.common.operator_pool import _jw_excitation_pauli_words
 from src.gqe.rl.map_elites import (
     MAPElitesArchive, DedupCache, PerMoleculeArchives, compute_circuit_features,
@@ -330,6 +331,23 @@ def _pad_pauli_word(word: str, n_qubits: int) -> str:
     return word[:n_qubits]
 
 
+# Cache: (operators_tuple, n_qubits) -> list[cudaq.pauli_word]
+# Avoids repeated string padding + cudaq.pauli_word() conversion in hot loops
+_pauli_word_cache: dict[tuple[tuple[str, ...], int], list[Any]] = {}
+
+
+def _get_pauli_words_cached(operators: list[str], n_qubits: int) -> list[Any]:
+    """Get cudaq.pauli_word list with caching — avoids redundant conversion."""
+    key = (tuple(operators), n_qubits)
+    cached = _pauli_word_cache.get(key)
+    if cached is not None:
+        return cached
+    padded = [_pad_pauli_word(w, n_qubits) for w in operators]
+    pauli_words = [cudaq.pauli_word(w) for w in padded]
+    _pauli_word_cache[key] = pauli_words
+    return pauli_words
+
+
 # Module-level CUDA-Q kernel definition.
 # MUST be defined here (not inside a function) because cudaq.make_kernel()
 # is NOT thread-safe when called inside a loop that also dispatches
@@ -349,6 +367,12 @@ def _ensure_cudaq():
     if _cudaq_import_attempted:
         return cudaq
     _cudaq_import_attempted = True
+    # Apply CUDA-Q env tuning (gate fusion, mempool) BEFORE import
+    try:
+        from src.gqe.accel.cudaq_tuning import ensure_applied
+        ensure_applied()
+    except Exception:
+        pass
     try:
         import cudaq as _cq  # type: ignore[import-untyped]
         cudaq = _cq
@@ -586,8 +610,7 @@ def evaluate_energies_batch(
         spin_ham = _get_cached_spin_ham(molecule_record)
 
     def _observe_sync(operators: list[str]) -> float:
-        padded = [_pad_pauli_word(w, n_qubits) for w in operators]
-        pauli_words = [cudaq.pauli_word(w) for w in padded]
+        pauli_words = _get_pauli_words_cached(operators, n_qubits)
         thetas = [theta] * len(pauli_words)
         try:
             if execution is not None:
@@ -630,8 +653,7 @@ def evaluate_energies_batch(
                 futures: list[tuple[int, Any]] = []
                 for j, i in enumerate(batch_ids):
                     operators = operators_batch[i]
-                    padded = [_pad_pauli_word(w, n_qubits) for w in operators]
-                    pauli_words = [cudaq.pauli_word(w) for w in padded]
+                    pauli_words = _get_pauli_words_cached(operators, n_qubits)
                     thetas = [theta] * len(pauli_words)
                     qpu_id = j % max(n_available_gpus, 1)
                     handle = cudaq.observe_async(
@@ -701,8 +723,7 @@ def evaluate_energies_parallel(
         futures: list[tuple[int, Any]] = []
         for j, i in enumerate(batch_ids):
             operators = operators_batch[i]
-            padded = [_pad_pauli_word(w, n_qubits) for w in operators]
-            pauli_words = [cudaq.pauli_word(w) for w in padded]
+            pauli_words = _get_pauli_words_cached(operators, n_qubits)
             thetas = [theta] * len(pauli_words)
             try:
                 qpu_id = j % max(n_gpus, 1)
@@ -791,8 +812,7 @@ def evaluate_energies_qd(
 
         # Check dedup cache first
         def compute_fn(ops):
-            padded = [_pad_pauli_word(w, n_qubits) for w in ops]
-            pauli_words = [cudaq.pauli_word(w) for w in padded]
+            pauli_words = _get_pauli_words_cached(ops, n_qubits)
 
             def energy_fn(thetas_arr):
                 thetas = [float(t) for t in thetas_arr]
@@ -1319,14 +1339,20 @@ def _seed_everything(seed: int) -> None:
 
 
 def _ensure_cuda_context() -> None:
-    import ctypes
+    """Create a CUDA context on the GPU assigned to this MPI rank.
+
+    Uses PyTorch (always available) instead of ctypes to initialize CUDA.
+    Safe no-op if no GPU or PyTorch unavailable.
+    """
     import os
-    local_rank = int(os.environ.get("OMPI_COMM_WORLD_LOCAL_RANK", 0))
-    libcudart = ctypes.CDLL(os.environ.get("CUDAQ_CUDART", "libcudart.so"))
-    libcudart.cudaSetDevice(local_rank)
-    d = ctypes.c_void_p()
-    libcudart.cudaMalloc(ctypes.byref(d), 4)
-    libcudart.cudaFree(d)
+    try:
+        import torch
+        local_rank = int(os.environ.get("OMPI_COMM_WORLD_LOCAL_RANK", 0))
+        if torch.cuda.is_available():
+            torch.cuda.set_device(local_rank)
+            _ = torch.zeros(1, device=f"cuda:{local_rank}")
+    except Exception:
+        pass
 
 
 def load_molecule_data(ham_path: Path, molecule: str, vocab: dict[str, int],
@@ -1664,8 +1690,9 @@ def main() -> None:
         print("WARNING: Pure RL mode. Entropy collapse prevention is critical.")
         print("  Enabled: distribution mixing, REPO, curriculum, BF16, top-p")
     else:
-        print(f"Loading checkpoint from {args.checkpoint}")
-        ckpt = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
+        ckpt_path = ensure_checkpoint(args.checkpoint)
+        print(f"Loading checkpoint from {ckpt_path}")
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
         vocab = ckpt["vocab"]
         inv_vocab = ckpt["inv_vocab"]
         config = ckpt["config"]

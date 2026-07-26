@@ -54,7 +54,7 @@ bash scripts/phase3/08_build_report.sh
 
 ## Launch on qBraid
 
-[![Launch on qBraid](https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid.svg)](https://account.qbraid.com?link=https://github.com/Quantum-Buddies/Conditional_GQE)
+[![Launch on qBraid](https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png)](https://account.qbraid.com?gitHubUrl=https://github.com/Quantum-Buddies/Conditional_GQE.git)
 
 ## Expected Runtime
 

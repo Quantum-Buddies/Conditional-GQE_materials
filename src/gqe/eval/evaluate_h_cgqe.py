@@ -35,22 +35,29 @@ from src.gqe.common.hamiltonian_utils import (
     get_active_electron_count,
 )
 
+# Apply CUDA-Q env tuning for gate fusion + mempool before any cudaq usage
+try:
+    from src.gqe.accel.cudaq_tuning import ensure_applied
+    ensure_applied()
+except Exception:
+    pass
+
 
 def _ensure_cuda_context() -> None:
     """Create a CUDA context on the GPU assigned to this MPI rank.
 
-    Open MPI's smcuda BTL needs each rank to have a CUDA context before
-    MPI_Init() so it can set up GPU-buffer communication.
+    Uses PyTorch (always available) instead of ctypes to initialize CUDA.
+    Safe no-op if no GPU or PyTorch unavailable.
     """
-    import ctypes
     import os
-
-    local_rank = int(os.environ.get("OMPI_COMM_WORLD_LOCAL_RANK", 0))
-    libcudart = ctypes.CDLL(os.environ.get("CUDAQ_CUDART", "libcudart.so"))
-    libcudart.cudaSetDevice(local_rank)
-    d = ctypes.c_void_p()
-    libcudart.cudaMalloc(ctypes.byref(d), 4)
-    libcudart.cudaFree(d)
+    try:
+        import torch
+        local_rank = int(os.environ.get("OMPI_COMM_WORLD_LOCAL_RANK", 0))
+        if torch.cuda.is_available():
+            torch.cuda.set_device(local_rank)
+            _ = torch.zeros(1, device=f"cuda:{local_rank}")
+    except Exception:
+        pass
 
 
 def _compute_circuit_energy(

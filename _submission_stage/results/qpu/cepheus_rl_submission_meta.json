@@ -1,0 +1,10 @@
+{
+  "device": "aws:rigetti:qpu:cepheus-1-108q",
+  "timestamp": "2026-07-25T23:50:11Z",
+  "checkpoint": "rl",
+  "sqd_jobs": {
+    "h2": "aws:rigetti:qpu:cepheus-1-108q-135b-qjob-6a654bb30936bd6f4ceca2e7",
+    "lih": "aws:rigetti:qpu:cepheus-1-108q-135b-qjob-6a654bb40936bd6f4ceca2ea",
+    "beh2": "aws:rigetti:qpu:cepheus-1-108q-135b-qjob-6a654bb50936bd6f4ceca2ee"
+  }
+}

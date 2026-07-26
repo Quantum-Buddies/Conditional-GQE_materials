@@ -1,0 +1,234 @@
+{
+  "description": "Classical and quantum baseline comparison for GIC Phase 3",
+  "methods_compared": [
+    "HF",
+    "CCSD/CCSD(T)",
+    "HEA-VQE",
+    "ADAPT-VQE",
+    "CUDA-Q GQE",
+    "H-cGQE (SFT+RL+opt)"
+  ],
+  "molecules": [
+    {
+      "molecule": "h2_0.5",
+      "n_qubits": 4,
+      "fci_energy": -1.0551597944706224,
+      "hcgqe_energy": -1.0543864991685457,
+      "hcgqe_error_mha": 0.77,
+      "chemical_accuracy": true,
+      "cudaq_gqe_energy": -1.0431018965243728,
+      "cudaq_gqe_error_mha": 12.06
+    },
+    {
+      "molecule": "h2_0.74",
+      "n_qubits": 4,
+      "fci_energy": -1.137283834488502,
+      "hcgqe_energy": -1.137136552017799,
+      "hcgqe_error_mha": 0.15,
+      "chemical_accuracy": true,
+      "cudaq_gqe_energy": -1.1169029463455153,
+      "cudaq_gqe_error_mha": 20.38
+    },
+    {
+      "molecule": "h2_1.0",
+      "n_qubits": 4,
+      "fci_energy": -1.1011503302326187,
+      "hcgqe_energy": -1.101148571268639,
+      "hcgqe_error_mha": 0.0,
+      "chemical_accuracy": true,
+      "cudaq_gqe_energy": -1.0662029360313117,
+      "cudaq_gqe_error_mha": 34.95
+    },
+    {
+      "molecule": "h2_1.5",
+      "n_qubits": 4,
+      "fci_energy": -0.9981493534714101,
+      "hcgqe_energy": -0.9782211720658275,
+      "hcgqe_error_mha": 19.93,
+      "chemical_accuracy": false,
+      "cudaq_gqe_energy": -0.9109248447189858,
+      "cudaq_gqe_error_mha": 87.22
+    },
+    {
+      "molecule": "h2_2.0",
+      "n_qubits": 4,
+      "fci_energy": -0.9486411121761859,
+      "hcgqe_energy": -0.8821032415395602,
+      "hcgqe_error_mha": 66.54,
+      "chemical_accuracy": false,
+      "cudaq_gqe_energy": -0.7838331829175919,
+      "cudaq_gqe_error_mha": 164.81
+    },
+    {
+      "molecule": "lih_1.2",
+      "n_qubits": 8,
+      "fci_energy": -7.837671147320343,
+      "hcgqe_energy": -7.835578568080478,
+      "hcgqe_error_mha": 2.09,
+      "chemical_accuracy": false,
+      "cudaq_gqe_energy": -7.8356204959478974,
+      "cudaq_gqe_error_mha": 2.05
+    },
+    {
+      "molecule": "lih_1.6",
+      "n_qubits": 8,
+      "fci_energy": -7.863681624920665,
+      "hcgqe_energy": -7.8618293572626206,
+      "hcgqe_error_mha": 1.85,
+      "chemical_accuracy": false,
+      "cudaq_gqe_energy": -7.861869455845228,
+      "cudaq_gqe_error_mha": 1.81
+    },
+    {
+      "molecule": "lih_2.0",
+      "n_qubits": 8,
+      "fci_energy": -7.832886003640116,
+      "hcgqe_energy": -7.830874271079732,
+      "hcgqe_error_mha": 2.01,
+      "chemical_accuracy": false,
+      "cudaq_gqe_energy": -7.830912119253919,
+      "cudaq_gqe_error_mha": 1.97
+    },
+    {
+      "molecule": "lih_3.0",
+      "n_qubits": 8,
+      "fci_energy": -7.7277331465927395,
+      "hcgqe_energy": -7.710815619869016,
+      "hcgqe_error_mha": 16.92,
+      "chemical_accuracy": false,
+      "cudaq_gqe_energy": -7.710834496229983,
+      "cudaq_gqe_error_mha": 16.9
+    },
+    {
+      "molecule": "n2_1.1",
+      "n_qubits": 12,
+      "fci_energy": -107.62310177201758,
+      "hcgqe_energy": -107.49633137037715,
+      "hcgqe_error_mha": 126.77,
+      "chemical_accuracy": false,
+      "cudaq_gqe_energy": -107.49655177012377,
+      "cudaq_gqe_error_mha": 126.55
+    },
+    {
+      "molecule": "n2_1.8",
+      "n_qubits": 12,
+      "fci_energy": -107.4595061091802,
+      "hcgqe_energy": -107.01710856615553,
+      "hcgqe_error_mha": 442.4,
+      "chemical_accuracy": false,
+      "cudaq_gqe_energy": -107.01741620951597,
+      "cudaq_gqe_error_mha": 442.09
+    },
+    {
+      "molecule": "n2_2.5",
+      "n_qubits": 12,
+      "fci_energy": -107.43440342869651,
+      "hcgqe_energy": -106.61677396586816,
+      "hcgqe_error_mha": 817.63,
+      "chemical_accuracy": false,
+      "cudaq_gqe_energy": -106.61704805089241,
+      "cudaq_gqe_error_mha": 817.36
+    },
+    {
+      "molecule": "iodobenzene",
+      "n_qubits": 8,
+      "fci_energy": -7078.011842695108,
+      "hcgqe_energy": -7078.008871255745,
+      "hcgqe_error_mha": 2.97,
+      "chemical_accuracy": false,
+      "vqe_energy": -7077.385492285519,
+      "vqe_error_mha": 626.35,
+      "vqe_runtime_s": 1.3480816090013832,
+      "cudaq_gqe_energy": -7078.013802343064,
+      "cudaq_gqe_error_mha": 1.96
+    },
+    {
+      "molecule": "methyl_iodide",
+      "n_qubits": 8,
+      "fci_energy": -6889.840354306438,
+      "hcgqe_energy": -6889.838761559182,
+      "hcgqe_error_mha": 1.59,
+      "chemical_accuracy": true,
+      "cudaq_gqe_energy": -6889.845064679519,
+      "cudaq_gqe_error_mha": 4.71
+    },
+    {
+      "molecule": "imeph",
+      "n_qubits": 8,
+      "fci_energy": -7190.356334261206,
+      "hcgqe_energy": -7190.331558070803,
+      "hcgqe_error_mha": 24.78,
+      "chemical_accuracy": false,
+      "cudaq_gqe_energy": -7190.337319352154,
+      "cudaq_gqe_error_mha": 19.01
+    },
+    {
+      "molecule": "phenol",
+      "n_qubits": 8,
+      "fci_energy": -301.6576396779959,
+      "hcgqe_energy": -301.61248484019205,
+      "hcgqe_error_mha": 45.15,
+      "chemical_accuracy": false,
+      "cudaq_gqe_energy": -301.6128342636788,
+      "cudaq_gqe_error_mha": 44.81
+    },
+    {
+      "molecule": "beh2_1.3",
+      "n_qubits": 14,
+      "fci_energy": -15.595047080934544,
+      "hcgqe_energy": -15.560232879256166,
+      "hcgqe_error_mha": 34.81,
+      "chemical_accuracy": false,
+      "cudaq_gqe_energy": -15.561289162601417,
+      "cudaq_gqe_error_mha": 33.76
+    }
+  ],
+  "ccsd_baselines": {
+    "description": "CCSD/CCSD(T) for FMO2 fragments",
+    "parent": {
+      "hf_energy": -7061.065571158854,
+      "ccsd_energy": -7061.463372739925,
+      "ccsd_t_energy": -0.010345372102853361,
+      "ccsd_t_total": -7061.473718112028
+    },
+    "frag_iodo": {
+      "hf_energy": -6871.843104999543,
+      "ccsd_energy": -6872.034192713813,
+      "ccsd_t_energy": -0.006247944061352941,
+      "ccsd_t_total": -6872.040440657875
+    },
+    "frag_ortho": {
+      "hf_energy": -74.98346365194448,
+      "ccsd_energy": -75.15529957314683,
+      "ccsd_t_energy": -0.007281743043077359,
+      "ccsd_t_total": -75.16258131618991
+    }
+  },
+  "ch3i_headline": {
+    "description": "CH3I (8q) three-way comparison",
+    "reference_energy": -6889.840354306438,
+    "methods": [
+      {
+        "method": "hardware_efficient_vqe",
+        "energy_hartree": -6888.8525609036105,
+        "error_mha": 987.7934028272648,
+        "qubits": 8,
+        "wall_time_seconds": 9.681711170822382
+      },
+      {
+        "method": "cudaq_gqe",
+        "energy_hartree": -6889.843000069323,
+        "error_mha": 2.6457628855496296,
+        "qubits": 8,
+        "wall_time_seconds": 0
+      },
+      {
+        "method": "h_cgqe_rlqf",
+        "energy_hartree": -6889.839725805002,
+        "error_mha": 0.6285014360400965,
+        "qubits": 8,
+        "wall_time_seconds": 0
+      }
+    ]
+  }
+}

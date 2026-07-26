@@ -13,7 +13,7 @@
     <a href="https://pytorch.org/"><img src="https://img.shields.io/badge/PyTorch-2.7+-red.svg" alt="PyTorch"></a>
     <a href="https://nvidia.github.io/cuda-quantum/"><img src="https://img.shields.io/badge/CUDA--Q-0.8+-green.svg" alt="CUDA-Q"></a>
     <a href="https://huggingface.co/Ryukijano/h-cgqe-gic2026"><img src="https://img.shields.io/badge/🤗%20HuggingFace-Model%20Card-yellow.svg" alt="Hugging Face"></a>
-    <a href="https://account.qbraid.com?link=https://github.com/Quantum-Buddies/Conditional_GQE"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid.svg" alt="Launch on qBraid" height="20"></a>
+    <a href="https://account.qbraid.com?gitHubUrl=https://github.com/Quantum-Buddies/Conditional_GQE.git"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" alt="Launch on qBraid" height="20"></a>
   </p>
 </p>
 
@@ -605,7 +605,7 @@ bash scripts/setup_env.sh
 
 On qBraid Lab, use the **Launch on qBraid** button or:
 
-[![Launch on qBraid](https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid.svg)](https://account.qbraid.com?link=https://github.com/Quantum-Buddies/Conditional_GQE)
+[![Launch on qBraid](https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png)](https://account.qbraid.com?gitHubUrl=https://github.com/Quantum-Buddies/Conditional_GQE.git)
 
 For local or HPC setups:
 
@@ -849,25 +849,42 @@ Key flags:
 - **`--energy-cache`**: Path to SQLite file from Stage 1. DedupCache / PersistentEnergyCache loads precomputed energies.
 - **`--cache-only`**: Skips CUDA-Q; uncached circuits get HF penalty. Prefer **without** `--cache-only` (write-through) when CUDA-Q is available so novel circuits get real energies. On qBraid: `bash scripts/train_rl.sh full`.
 
-### Stage 3: FMO2 Reconstruction
+### Stage 3: FMO2 3-Fragment Scaling (Genuine Qubit Reduction)
 
 ```bash
-# Exact baseline (classical)
-python -m src.gqe.eval.run_fmo2 \
-    --fragments results/data/fragments/fmo_hamiltonians.json \
-    --method exact \
-    --out results/fmo2/fmo2_exact.json
+# Generate 3-fragment iodobenzene Hamiltonians (monomers 4q, dimers 8q, parent 12q)
+python scripts/generate_fmo2_fragments.py
 
-# H-cGQE quantum (with MAP-Elites archive circuit library)
-python -m src.gqe.eval.run_fmo2 \
-    --fragments results/data/fragments/fmo_hamiltonians.json \
-    --method hcgqe \
-    --checkpoint results/train/h_cgqe_rl_dapo_phase3.pt \
-    --archive-dir results/train/map_elites/ \
-    --out results/fmo2/fmo2_gqe.json
+# Run FMO2 exact + H-cGQE + L-BFGS-B
+python scripts/run_fmo2_scaling.py
+python scripts/run_fmo2_lbfgs.py
+
+# Submit dimer/monomer circuits to Rigetti Cepheus QPU
+python scripts/submit_fmo2_qpu.py --submit
+
+# Retrieve QPU results + SQD post-processing
+python scripts/retrieve_and_sqd.py --meta results/qpu/fmo2_cepheus_submission_meta.json \
+    --hamiltonians results/data/fragments/dimers.json \
+    --out results/qpu/fmo2_cepheus_sqd_results.json
 ```
 
-### Stage 4: QPU Manifest Generation
+**Key result**: 12q parent recovered from max 8q circuits (33% qubit reduction). Fragmentation error: 11.3 mHa (nonzero → non-tautological).
+
+### Stage 4: Bi-Level QPU Validation (L-BFGS-B Optimized Circuits)
+
+```bash
+# Submit L-BFGS-B optimized + zero-theta circuits to Cepheus
+python scripts/submit_lbfgs_qpu.py --submit --include-zero-theta
+
+# Retrieve + SQD
+python scripts/retrieve_and_sqd.py --meta results/qpu/lbfgs_cepheus_submission_meta.json \
+    --hamiltonians results/data/hamiltonians_gic2026/hamiltonians.json \
+    --out results/qpu/lbfgs_cepheus_sqd_results.json
+```
+
+**Bi-level pipeline**: RL discovers operator topology (outer loop) → L-BFGS-B optimizes continuous angles (inner loop) → QPU executes → SQD recovers energy.
+
+### Stage 5: QPU Manifest Generation (Legacy)
 
 ```bash
 python scripts/phase3/generate_qpu_manifests.py \

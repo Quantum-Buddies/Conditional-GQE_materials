@@ -23,6 +23,7 @@ import numpy as np
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from src.gqe.common.ensure_checkpoint import ensure_checkpoint
 from src.gqe.models.h_cgqe_transformer import (
     HcGQEModel,
     tokenize_hamiltonian,
@@ -134,9 +135,10 @@ def main() -> None:
     device = torch.device("cuda" if args.use_cuda and torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
 
-    # Load checkpoint
-    print(f"Loading checkpoint from {args.checkpoint}")
-    ckpt = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
+    # Load checkpoint (auto-download from Hugging Face if missing)
+    ckpt_path = ensure_checkpoint(args.checkpoint)
+    print(f"Loading checkpoint from {ckpt_path}")
+    ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     vocab = ckpt["vocab"]
     inv_vocab = ckpt["inv_vocab"]
     config = ckpt["config"]

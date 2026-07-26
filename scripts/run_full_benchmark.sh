@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PYTHON_BIN="${PYTHON_BIN:-/mnt/scratch/kcwp264/.conda_envs/cudaq-env/bin/python}"
+PYTHON_BIN="${PYTHON:-python}"
 
 mkdir -p "${ROOT}/results/data" "${ROOT}/results/baselines" "${ROOT}/results/train" "${ROOT}/results/tables" "${ROOT}/results/plots"
 

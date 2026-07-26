@@ -3,8 +3,12 @@
 # Usage: on a GPU node, run:  bash scripts/run_scaling.sh
 set -e
 
-export PY=/mnt/scratch/kcwp264/.conda_envs/cudaq-env/bin/python
-cd /scratch/kcwp264/Conditional-GQE_materials
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${ROOT}"
+
+PYTHON="${PYTHON:-python}"
+export PY="${PYTHON}"
 
 HAM=results/data/hamiltonians_scaling.json/hamiltonians.json
 GQE_OUT=results/baselines/cudaq_gqe_scaling.json

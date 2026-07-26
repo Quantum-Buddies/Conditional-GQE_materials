@@ -25,8 +25,8 @@ ENCODER_OUT="${RESULTS_DIR}/train/ddp_chemistry_encoder.done"
 EMBEDDINGS_OUT="${RESULTS_DIR}/train/ddp_graph_embeddings.json"
 GQE_OUT="${RESULTS_DIR}/baselines/cudaq_gqe_mqpu.json"
 
-PYTHON="${CONDA_PREFIX:-/mnt/scratch/kcwp264/.conda_envs/cudaq-env}/bin/python"
-TORCHRUN="${CONDA_PREFIX:-/mnt/scratch/kcwp264/.conda_envs/cudaq-env}/bin/torchrun"
+PYTHON="${PYTHON:-python}"
+TORCHRUN="${TORCHRUN:-torchrun}"
 
 echo "=== Multi-GPU Chemistry-Conditioned GQE Workflow ==="
 echo "Project root: ${PROJECT_ROOT}"

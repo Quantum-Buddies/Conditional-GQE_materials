@@ -12,7 +12,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 OUT_DIR="${1:-${PROJECT_ROOT}/results/gic2026/manifests}"
 
 # Use cudaq-env Python by default; allow override via PYTHON env var
-PYTHON="${PYTHON:-/scratch/kcwp264/.conda_envs/cudaq-env/bin/python}"
+PYTHON="${PYTHON:-python}"
 
 mkdir -p "${OUT_DIR}"
 

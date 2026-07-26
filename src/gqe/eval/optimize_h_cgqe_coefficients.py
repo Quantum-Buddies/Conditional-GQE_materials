@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,13 @@ from src.gqe.common.hamiltonian_utils import (
     get_active_electron_count,
 )
 
+# Apply CUDA-Q env tuning for gate fusion + mempool before any cudaq usage
+try:
+    from src.gqe.accel.cudaq_tuning import ensure_applied
+    ensure_applied()
+except Exception:
+    pass
+
 
 def _pad_pauli_word(word: str, n_qubits: int) -> str:
     """Pad or truncate a Pauli word to match n_qubits."""
@@ -49,18 +57,18 @@ def _pad_pauli_word(word: str, n_qubits: int) -> str:
 def _ensure_cuda_context() -> None:
     """Create a CUDA context on the GPU assigned to this MPI rank.
 
-    Open MPI's smcuda BTL needs each rank to have a CUDA context before
-    MPI_Init() so it can set up GPU-buffer communication.
+    Uses PyTorch (always available) instead of ctypes to initialize CUDA.
+    Safe no-op if no GPU or PyTorch unavailable.
     """
-    import ctypes
     import os
-
-    local_rank = int(os.environ.get("OMPI_COMM_WORLD_LOCAL_RANK", 0))
-    libcudart = ctypes.CDLL(os.environ.get("CUDAQ_CUDART", "libcudart.so"))
-    libcudart.cudaSetDevice(local_rank)
-    d = ctypes.c_void_p()
-    libcudart.cudaMalloc(ctypes.byref(d), 4)
-    libcudart.cudaFree(d)
+    try:
+        import torch
+        local_rank = int(os.environ.get("OMPI_COMM_WORLD_LOCAL_RANK", 0))
+        if torch.cuda.is_available():
+            torch.cuda.set_device(local_rank)
+            _ = torch.zeros(1, device=f"cuda:{local_rank}")
+    except Exception:
+        pass
 
 
 def _build_kernel_for_sequence(
@@ -140,6 +148,7 @@ def _optimize_coefficients(
     operators: list[str],
     initial_thetas: np.ndarray | None = None,
     max_iter: int = 100,
+    seed: int = 42,
 ) -> tuple[float, np.ndarray]:
     """Optimize rotation coefficients for a fixed operator sequence.
     
@@ -148,6 +157,7 @@ def _optimize_coefficients(
         operators: List of Pauli words (fixed by H-cGQE).
         initial_thetas: Initial guess for coefficients. If None, uses small random values.
         max_iter: Maximum optimization iterations.
+        seed: Random seed for deterministic reproducibility.
     
     Returns:
         best_energy: Optimized energy value.
@@ -163,14 +173,12 @@ def _optimize_coefficients(
     kernel, pauli_words = _build_kernel_for_sequence(n_qubits, n_electrons, operators)
     
     if initial_thetas is None:
-        # Start with small values similar to GQE pool scales
-        initial_thetas = np.random.uniform(-0.05, 0.05, size=len(operators))
+        rng = np.random.default_rng(seed)
+        initial_thetas = rng.uniform(-0.05, 0.05, size=len(operators))
     
     def cost_fn(thetas: np.ndarray) -> float:
         return _evaluate_energy(thetas, kernel, spin_ham, n_qubits, n_electrons, pauli_words)
     
-    # Use L-BFGS-B for gradient-free bounded optimization
-    # Bounds keep coefficients in a reasonable range
     bounds = [(-np.pi, np.pi) for _ in range(len(operators))]
     
     result = minimize(
@@ -187,6 +195,107 @@ def _optimize_coefficients(
     return best_energy, best_thetas
 
 
+def _optimize_coefficients_multistart(
+    molecule_record: dict[str, Any],
+    operators: list[str],
+    max_iter: int = 100,
+    n_starts: int = 4,
+    seed: int = 42,
+    n_gpus: int = 1,
+) -> tuple[float, np.ndarray, dict[str, Any]]:
+    """Multi-start L-BFGS-B optimization with deterministic seeds.
+    
+    Runs n_starts independent optimizations from different initial points,
+    all seeded deterministically for reproducibility. Returns the best result
+    along with convergence metadata.
+    
+    Uses the accelerated batched optimizer (src.gqe.accel.batched_optimizer)
+    when available for multi-GPU parallel observe_async, with fallback to
+    the original sequential L-BFGS-B path.
+    
+    Args:
+        molecule_record: Hamiltonian record.
+        operators: List of Pauli words (fixed by H-cGQE).
+        max_iter: Maximum optimization iterations per start.
+        n_starts: Number of independent optimization starts.
+        seed: Base random seed (each start uses seed + start_index).
+        n_gpus: Number of GPUs for parallel evaluation.
+    
+    Returns:
+        best_energy: Best optimized energy across all starts.
+        best_thetas: Best coefficient array.
+        metadata: Dict with per-start energies, convergence info, timing.
+    """
+    if cudaq is None:
+        raise RuntimeError("CUDA-Q not available")
+    
+    # Try accelerated batched optimizer
+    if n_gpus > 1:
+        try:
+            from src.gqe.accel.batched_optimizer import optimize_coefficients_batched
+            return optimize_coefficients_batched(
+                molecule_record, operators,
+                max_iter=max_iter, n_starts=n_starts, seed=seed,
+                n_gpus=n_gpus,
+            )
+        except Exception as e:
+            print(f"  Batched optimizer unavailable ({e}), falling back to sequential")
+    
+    n_qubits = int(molecule_record["n_qubits"])
+    n_electrons = get_active_electron_count(molecule_record)
+    spin_ham = hamiltonian_to_spin_operator(molecule_record)
+    kernel, pauli_words = _build_kernel_for_sequence(n_qubits, n_electrons, operators)
+    
+    all_energies = []
+    all_thetas = []
+    all_converged = []
+    all_iters = []
+    start_times = []
+    
+    for start_idx in range(n_starts):
+        start_seed = seed + start_idx
+        rng = np.random.default_rng(start_seed)
+        initial_thetas = rng.uniform(-0.05, 0.05, size=len(operators))
+        
+        def cost_fn(thetas: np.ndarray) -> float:
+            return _evaluate_energy(thetas, kernel, spin_ham, n_qubits, n_electrons, pauli_words)
+        
+        bounds = [(-np.pi, np.pi) for _ in range(len(operators))]
+        
+        t0 = time.time()
+        result = minimize(
+            cost_fn,
+            initial_thetas,
+            method="L-BFGS-B",
+            bounds=bounds,
+            options={"maxiter": max_iter},
+        )
+        elapsed = time.time() - t0
+        
+        all_energies.append(float(result.fun))
+        all_thetas.append(result.x)
+        all_converged.append(result.success)
+        all_iters.append(result.nit if hasattr(result, 'nit') else max_iter)
+        start_times.append(elapsed)
+    
+    best_idx = int(np.argmin(all_energies))
+    best_energy = all_energies[best_idx]
+    best_thetas = all_thetas[best_idx]
+    
+    metadata = {
+        "n_starts": n_starts,
+        "seed_base": seed,
+        "all_energies": all_energies,
+        "all_converged": all_converged,
+        "all_iters": all_iters,
+        "all_times_seconds": start_times,
+        "best_start_index": best_idx,
+        "total_time_seconds": sum(start_times),
+    }
+    
+    return best_energy, best_thetas, metadata
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Optimize H-cGQE operator coefficients")
     parser.add_argument("--generated", type=Path, required=True, help="Generated sequences JSON")
@@ -198,6 +307,8 @@ def main() -> None:
     parser.add_argument("--max-iter", type=int, default=100, help="Max optimization iterations per sequence")
     parser.add_argument("--top-k", type=int, default=10, help="Optimize top-k sequences per molecule (by heuristic)")
     parser.add_argument("--max-qubits", type=int, default=None, help="Skip molecules with more than this many qubits")
+    parser.add_argument("--n-starts", type=int, default=4, help="Number of deterministic multi-starts per sequence")
+    parser.add_argument("--seed", type=int, default=42, help="Base random seed for deterministic reproducibility")
     args = parser.parse_args()
 
     if cudaq and args.target:
@@ -278,22 +389,28 @@ def main() -> None:
         print(f"  Optimizing coefficients for top-{args.top_k} sequences...")
         optimized_energies = []
         optimized_thetas_list = []
+        optimized_metadata = []
         
         for i, seq in enumerate(top_sequences):
             print(f"    Sequence {i+1}/{args.top_k} ({len(seq['operators'])} ops)...", end=" ")
             try:
-                energy, thetas = _optimize_coefficients(
+                energy, thetas, opt_meta = _optimize_coefficients_multistart(
                     mol_record,
                     seq["operators"],
                     max_iter=args.max_iter,
+                    n_starts=args.n_starts,
+                    seed=args.seed + i,
+                    n_gpus=args.parallel_gpus or 1,
                 )
                 optimized_energies.append(energy)
                 optimized_thetas_list.append(thetas.tolist())
-                print(f"E = {energy:.6f} Ha")
+                optimized_metadata.append(opt_meta)
+                print(f"E = {energy:.6f} Ha ({opt_meta['total_time_seconds']:.1f}s, {opt_meta['n_starts']} starts)")
             except Exception as e:
                 print(f"FAILED: {e}")
                 optimized_energies.append(float("inf"))
                 optimized_thetas_list.append(None)
+                optimized_metadata.append(None)
         
         # Find best optimized result
         if optimized_energies:
@@ -313,6 +430,7 @@ def main() -> None:
                 "best_operators": best_ops,
                 "best_thetas": best_thetas,
                 "all_optimized_energies": optimized_energies,
+                "optimization_metadata": optimized_metadata[best_idx] if optimized_metadata else None,
             })
         else:
             print(f"  No successful optimizations for {molecule}")

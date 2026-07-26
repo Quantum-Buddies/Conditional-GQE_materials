@@ -32,6 +32,10 @@ from pathlib import Path
 import torch
 from tqdm import tqdm
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from src.gqe.common.ensure_checkpoint import ensure_checkpoint
+
 
 def uniform_soup(
     checkpoint_paths: list[Path],
@@ -41,13 +45,13 @@ def uniform_soup(
     print(f"Uniform soup: averaging {len(checkpoint_paths)} checkpoints")
 
     # Load first checkpoint as base
-    base_ckpt = torch.load(checkpoint_paths[0], map_location="cpu", weights_only=False)
+    base_ckpt = torch.load(ensure_checkpoint(checkpoint_paths[0]), map_location="cpu", weights_only=False)
     base_state = base_ckpt["model_state_dict"]
     soup_state = {k: v.clone().float() for k, v in base_state.items()}
 
     # Accumulate remaining checkpoints
     for ckpt_path in tqdm(checkpoint_paths[1:], desc="Averaging"):
-        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        ckpt = torch.load(ensure_checkpoint(ckpt_path), map_location="cpu", weights_only=False)
         state = ckpt["model_state_dict"]
         for k in soup_state:
             if k in state:
@@ -105,7 +109,7 @@ def greedy_soup(
     individual_energies = {}
 
     for ckpt_path in tqdm(checkpoint_paths, desc="Evaluating individual"):
-        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        ckpt = torch.load(ensure_checkpoint(ckpt_path), map_location="cpu", weights_only=False)
         energy = evaluate_model_on_molecules(ckpt, ham_records, max_qubits=24)
         individual_energies[str(ckpt_path)] = energy
         if energy < best_energy:
@@ -115,7 +119,7 @@ def greedy_soup(
     print(f"Best individual: {best_ckpt_path} (energy={best_energy:.6f})")
 
     # Greedy addition
-    soup_ckpt = torch.load(best_ckpt_path, map_location="cpu", weights_only=False)
+    soup_ckpt = torch.load(ensure_checkpoint(best_ckpt_path), map_location="cpu", weights_only=False)
     soup_state = {k: v.clone().float() for k, v in soup_ckpt["model_state_dict"].items()}
     current_n = 1
     current_energy = best_energy
@@ -125,7 +129,7 @@ def greedy_soup(
             continue
 
         # Try adding this checkpoint
-        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        ckpt = torch.load(ensure_checkpoint(ckpt_path), map_location="cpu", weights_only=False)
         candidate_state = {k: v.clone().float() for k, v in soup_state.items()}
         for k in candidate_state:
             if k in ckpt["model_state_dict"]:

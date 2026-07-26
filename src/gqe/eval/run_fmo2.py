@@ -40,6 +40,12 @@ try:
 except ImportError:
     from src.gqe.common.hamiltonian_utils import load_hamiltonian_records, find_record_by_name
 
+try:
+    from src.gqe.common.ensure_checkpoint import ensure_checkpoint
+except ImportError:
+    def ensure_checkpoint(p, **kw):
+        return Path(p)
+
 
 def exact_energy_from_hamiltonian(record: dict[str, Any]) -> float:
     """Compute exact ground-state energy via dense diagonalization."""
@@ -72,7 +78,8 @@ def hcgqe_fragment_energy(
     import torch
     from src.gqe.models.h_cgqe_transformer import HcGQEModel, tokenize_hamiltonian, build_operator_vocab
 
-    ckpt = torch.load(checkpoint, map_location="cuda" if torch.cuda.is_available() else "cpu", weights_only=False)
+    ckpt_path = ensure_checkpoint(checkpoint)
+    ckpt = torch.load(ckpt_path, map_location="cuda" if torch.cuda.is_available() else "cpu", weights_only=False)
     config = ckpt.get("config", {})
     model = HcGQEModel(
         vocab_size=config.get("vocab_size", 78),
@@ -294,12 +301,12 @@ def run_fmo2(
             elif pair_key in dimer_records:
                 dimer_record = dimer_records[pair_key]
             elif n_frags == 2 and parent_records is not None:
-                parent_name = frag_data.get("parent_name", "imeph")
-                try:
-                    dimer_record = find_record_by_name(parent_records, parent_name)
-                    print(f"    Using parent molecule '{parent_name}' as dimer")
-                except ValueError:
-                    pass
+                raise ValueError(
+                    "Circular FMO2 path removed: cannot use parent molecule as dimer. "
+                    "Provide explicit dimer Hamiltonians via --dimers. "
+                    "The 2-fragment parent-as-dimer shortcut is not a genuine "
+                    "scaling result (max circuit = parent size)."
+                )
 
             if dimer_record is None:
                 E_ij = monomer_energies[i] + monomer_energies[j]

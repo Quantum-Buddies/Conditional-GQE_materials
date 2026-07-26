@@ -4,9 +4,9 @@
 # requirement. The AIRE L40S nodes have 3 GPUs each, so we use 2 per node and
 # leave 2 idle. Multi-node GPU communication also requires a CUDA-aware inter-
 # node MPI transport (e.g., InfiniBand, UCX, or Cray MPICH with GPU support).
-# The conda-forge Open MPI in /mnt/scratch/kcwp264/.conda_envs/cudaq-env does
-# NOT provide such a transport, so this script will likely fail for circuits
-# that require inter-node statevector exchange. It is provided as a reference.
+# The conda-forge Open MPI may NOT provide such a transport, so this script
+# will likely fail for circuits that require inter-node statevector exchange.
+# It is provided as a reference.
 # Usage: sbatch scripts/run_scaling_mgpu_2node_4gpu.sh
 
 #SBATCH -p gpu
@@ -19,17 +19,23 @@
 
 set -e
 
-module load miniforge
-conda activate /mnt/scratch/kcwp264/.conda_envs/cudaq-env
-module purge
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${ROOT}"
 
-export PY=/mnt/scratch/kcwp264/.conda_envs/cudaq-env/bin/python
-cd /scratch/kcwp264/Conditional-GQE_materials
+PYTHON="${PYTHON:-python}"
+export PY="${PYTHON}"
 
-# CUDA-Q MPI plugin (rebuilt against the conda Open MPI)
-export CUDAQ_MPI_COMM_LIB=/mnt/scratch/kcwp264/.conda_envs/cudaq-env/lib/python3.11/site-packages/distributed_interfaces/libcudaq_distributed_interface_mpi.so
+# CUDA-Q MPI plugin path (auto-detect)
+_CUDAQ_MPI_PLUGIN=$(python -c "import os, cudaq; print(os.path.join(os.path.dirname(cudaq.__file__), '..', 'distributed_interfaces', 'libcudaq_distributed_interface_mpi.so'))" 2>/dev/null || echo "")
+if [ -n "${_CUDAQ_MPI_PLUGIN}" ] && [ -f "${_CUDAQ_MPI_PLUGIN}" ]; then
+    export CUDAQ_MPI_COMM_LIB="${_CUDAQ_MPI_PLUGIN}"
+fi
 export UBACKEND_USE_FABRIC_HANDLE=0
-export CUDAQ_MGPU_LIB_MPI=/mnt/scratch/kcwp264/.conda_envs/cudaq-env/lib/libmpi.so
+_LIBMPI=$(python -c "import os, mpi4py; print(os.path.join(os.path.dirname(mpi4py.__file__), '..', '..', 'lib', 'libmpi.so'))" 2>/dev/null || echo "")
+if [ -n "${_LIBMPI}" ] && [ -f "${_LIBMPI}" ]; then
+    export CUDAQ_MGPU_LIB_MPI="${_LIBMPI}"
+fi
 export CUDAQ_MGPU_COMM_PLUGIN_TYPE=OpenMPI
 
 # Open MPI setup for multi-node. The conda TCP BTL is not CUDA-aware, so
@@ -68,7 +74,16 @@ cat > /tmp/test_mgpu_4gpu.py << 'PYEOF'
 import os, ctypes
 local_rank = int(os.environ.get('SLURM_LOCALID', 0))
 import cudaq
-libcudart = ctypes.CDLL('/mnt/scratch/kcwp264/.conda_envs/cudaq-env/lib/libcudart.so')
+import ctypes.util
+_cudart = ctypes.util.find_library('cudart')
+if _cudart is None:
+    import os
+    for d in ['/usr/local/cuda/lib64', os.environ.get('CONDA_PREFIX', '')]:
+        p = os.path.join(d, 'libcudart.so')
+        if os.path.exists(p):
+            _cudart = p
+            break
+libcudart = ctypes.CDLL(_cudart)
 libcudart.cudaSetDevice(local_rank)
 d = ctypes.c_void_p(); libcudart.cudaMalloc(ctypes.byref(d), 4); libcudart.cudaFree(d)
 

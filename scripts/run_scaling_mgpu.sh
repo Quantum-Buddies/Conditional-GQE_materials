@@ -10,15 +10,25 @@
 # Usage: on a GPU node with 3 GPUs, run:  bash scripts/run_scaling_mgpu.sh
 set -e
 
-export PY=/mnt/scratch/kcwp264/.conda_envs/cudaq-env/bin/python
-cd /scratch/kcwp264/Conditional-GQE_materials
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${ROOT}"
 
-# CUDA-Q MPI plugin (rebuilt via activate_custom_mpi.sh against conda's CUDA-aware Open MPI 5.0.10)
-export CUDAQ_MPI_COMM_LIB=/mnt/scratch/kcwp264/.conda_envs/cudaq-env/lib/python3.11/site-packages/distributed_interfaces/libcudaq_distributed_interface_mpi.so
+PYTHON="${PYTHON:-python}"
+export PY="${PYTHON}"
+
+# CUDA-Q MPI plugin path (auto-detect from conda env or CUDA-Q installation)
+_CUDAQ_MPI_PLUGIN=$(python -c "import os, cudaq; print(os.path.join(os.path.dirname(cudaq.__file__), '..', 'distributed_interfaces', 'libcudaq_distributed_interface_mpi.so'))" 2>/dev/null || echo "")
+if [ -n "${_CUDAQ_MPI_PLUGIN}" ] && [ -f "${_CUDAQ_MPI_PLUGIN}" ]; then
+    export CUDAQ_MPI_COMM_LIB="${_CUDAQ_MPI_PLUGIN}"
+fi
 # Disable fabric-based memory sharing (PCIe-only L40S systems)
 export UBACKEND_USE_FABRIC_HANDLE=0
-# Point cuStateVec to the exact libmpi.so (CUDA-aware Open MPI 5.0.10 in conda env)
-export CUDAQ_MGPU_LIB_MPI=/mnt/scratch/kcwp264/.conda_envs/cudaq-env/lib/libmpi.so
+# Point cuStateVec to libmpi.so (auto-detect)
+_LIBMPI=$(python -c "import os, mpi4py; print(os.path.join(os.path.dirname(mpi4py.__file__), '..', '..', 'lib', 'libmpi.so'))" 2>/dev/null || echo "")
+if [ -n "${_LIBMPI}" ] && [ -f "${_LIBMPI}" ]; then
+    export CUDAQ_MGPU_LIB_MPI="${_LIBMPI}"
+fi
 export CUDAQ_MGPU_COMM_PLUGIN_TYPE=OpenMPI
 # L40S are PCIe-only (no NVLink). Force OB1 PML + smcuda BTL and disable CUDA IPC
 # to force CPU-staged copies and avoid the MPI_ERR_OTHER crash in MPI_Isend.
@@ -38,7 +48,7 @@ RLQF_CKPT=results/train/h_cgqe_model_rlqf_phase3.pt
 # mgpu requires power-of-2 ranks. Use 2 GPUs (96 GB pooled, ~33 qubit limit)
 # Limit CUDA_VISIBLE_DEVICES to 2 GPUs to avoid MPI mapping issues with 3 GPUs
 export CUDA_VISIBLE_DEVICES=0,1
-MPI="/mnt/scratch/kcwp264/.conda_envs/cudaq-env/bin/mpiexec --oversubscribe --map-by ppr:2:node -np 2"
+MPI="mpiexec --oversubscribe --map-by ppr:2:node -np 2"
 
 echo "=================================================="
 echo "STEP 1: Verify mgpu backend works"
@@ -49,7 +59,16 @@ import os, ctypes
 # otherwise Open MPI's smcuda BTL fails to initialize and falls back to TCP
 # (which cannot handle GPU buffers).
 local_rank = int(os.environ.get('OMPI_COMM_WORLD_LOCAL_RANK', 0))
-libcudart = ctypes.CDLL('/mnt/scratch/kcwp264/.conda_envs/cudaq-env/lib/libcudart.so')
+import ctypes.util
+_cudart = ctypes.util.find_library('cudart')
+if _cudart is None:
+    import os
+    for d in ['/usr/local/cuda/lib64', os.environ.get('CONDA_PREFIX', '')]:
+        p = os.path.join(d, 'libcudart.so')
+        if os.path.exists(p):
+            _cudart = p
+            break
+libcudart = ctypes.CDLL(_cudart)
 libcudart.cudaSetDevice(local_rank)
 d = ctypes.c_void_p()
 libcudart.cudaMalloc(ctypes.byref(d), 4)

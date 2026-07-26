@@ -18,12 +18,12 @@
 
 set -e
 
-module load miniforge
-conda activate /mnt/scratch/kcwp264/.conda_envs/cudaq-env
-module purge
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${ROOT}"
 
-export PY=/mnt/scratch/kcwp264/.conda_envs/cudaq-env/bin/python
-cd /scratch/kcwp264/Conditional-GQE_materials
+PYTHON="${PYTHON:-python}"
+export PY="${PYTHON}"
 
 HAM=results/data/hamiltonians_scaling.json/hamiltonians.json
 OUT_DIR=results/baselines
