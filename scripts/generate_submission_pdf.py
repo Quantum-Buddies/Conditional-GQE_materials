@@ -365,7 +365,7 @@ def generate_pdf(out_path: Path | None = None) -> Path:
         ("IQM Emerald QPU", "State fidelity", "87.5%", "CH3I circuit"),
         ("Transfer Learning", "Molecules", "10 (4-56q)", "SMILES encoder"),
         ("Error Mitigation", "Methods", "REM + ZNE", "Noise-aware"),
-        ("Credit Usage", "Credits", "612 / 13400", "4.6% used"),
+        ("Credit Usage", "Credits", "~11,475 / 13,400", "85.6% used"),
     ]
     for exp, metric, value, status in rows:
         table_row([exp, metric, value, status], widths4)

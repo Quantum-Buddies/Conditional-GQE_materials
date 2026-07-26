@@ -1079,7 +1079,9 @@
     "theta_source": "transfer_from_n2",
     "transfer_source": "n2",
     "transfer_source_nq": 20,
-    "padded_by": 4
+    "padded_by": 4,
+    "optimization_status": "unoptimized_placeholder",
+    "optimization_note": "Thetas left at default 0.1; operators transferred from another molecule and padded with identity. Energy is not a converged H-cGQE result."
   },
   {
     "molecule": "ethylene",
@@ -1131,7 +1133,9 @@
     "theta_source": "transfer_from_co",
     "transfer_source": "co",
     "transfer_source_nq": 20,
-    "padded_by": 8
+    "padded_by": 8,
+    "optimization_status": "unoptimized_placeholder",
+    "optimization_note": "Thetas left at default 0.1; operators transferred from another molecule and padded with identity. Energy is not a converged H-cGQE result."
   },
   {
     "molecule": "benzene_cas20",
@@ -1171,6 +1175,8 @@
     "theta_source": "transfer_from_benzene_cas12",
     "transfer_source": "benzene_cas12",
     "transfer_source_nq": 12,
-    "padded_by": 28
+    "padded_by": 28,
+    "optimization_status": "unoptimized_placeholder",
+    "optimization_note": "Thetas left at default 0.1; operators transferred from another molecule and padded with identity. Energy is not a converged H-cGQE result."
   }
 ]

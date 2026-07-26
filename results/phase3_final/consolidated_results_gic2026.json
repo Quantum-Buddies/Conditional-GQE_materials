@@ -14,12 +14,15 @@
     "chemically_accurate_count": 4,
     "chemical_accuracy_threshold_mha": 1.6,
     "qpu_molecules_run": 12,
-    "qpu_chemically_accurate": 1,
+    "qpu_chemically_accurate": 0,
     "best_gpu_error_mha": 0.0,
-    "best_qpu_error_mha": 0.0,
+    "best_qpu_error_mha": 13.948195658485929,
     "qpu_max_qubits": 28,
+    "qpu_max_qubits_validated": 20,
     "qpu_device": "Rigetti Cepheus-1-108Q (108q)",
-    "qpu_best_error_mha": 13.948195658485929
+    "qpu_best_error_mha": 13.948195658485929,
+    "qpu_best_molecule": "methyl_iodide_cas12",
+    "note": "Ethylene (28q) and iodobenzene (8q) have no FCI reference; errors are null. Best validated QPU error is 13.95 mHa (methyl_iodide_cas12, 12q). No QPU molecule reached chemical accuracy (1.6 mHa)."
   },
   "gpu_benchmark": [
     {
@@ -364,8 +367,10 @@
       "hf_energy": -77.07228357089053,
       "fci_energy": null,
       "error_mHa": null,
+      "error_vs_hf_mha": 7.845,
       "correct_pn_pct": 23.92578125,
       "circuit_type": "RL-optimized ansatz",
+      "validation_note": "No FCI reference available for 28q ethylene. SQD energy improves on HF by 7.85 mHa. Qubit count is valid but accuracy is unvalidated against exact diagonalization.",
       "job_id": "aws:rigetti:qpu:cepheus-1-108q-135b-qjob-6a65ddb10936bd6f4cecc1c7",
       "bit_order_fix": "reversed"
     },
@@ -398,6 +403,7 @@
       "error_mHa": null,
       "correct_pn_pct": 71.03271484375,
       "circuit_type": "HF state + SQD",
+      "validation_note": "No FCI/HF reference available for this active space. PNP=71% suggests good state quality. GPU benchmark (8q, different active space) achieved 2.97 mHa error.",
       "job_id": "aws:rigetti:qpu:cepheus-1-108q-135b-qjob-6a65ddbc0936bd6f4cecc1ed",
       "bit_order_fix": "reversed"
     },
