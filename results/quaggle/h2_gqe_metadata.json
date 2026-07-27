@@ -60,7 +60,7 @@
   "hf_energy_ha": null,
   "fci_energy_ha": null,
   "source": "Conditional-GQE (H-cGQE Transformer + L-BFGS-B)",
-  "source_checkpoint": "h_cgqe_rl_gic2026.pt",
+  "source_checkpoint": null,
   "qasm_file": "h2_gqe_demo.qasm",
   "qasm_ansatz_file": "h2_gqe_ansatz.qasm",
   "quaggle_import_instructions": "1. Open Quaggle Circuit Builder\n2. Import the QASM file (OpenQASM 2.0 format)\n3. The circuit includes Hartree-Fock initial state + GQE ansatz\n4. Run on simulator or export to QPU\n5. Reference energy values in metadata JSON for comparison"
